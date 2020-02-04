@@ -2,6 +2,7 @@
     #include "parser.h"
     #include "ast.h"
     #include "safe.h"
+    #include "dynamic_string.h"
     #include <errno.h>
     #include <limits.h>
 
@@ -20,6 +21,8 @@
         const char *filename,
         yyscan_t scanner,
         const char *msg);
+
+    static dstring *str;
 
     enum yytokentype parse_int(const char *str,
         long long int *val,
@@ -81,21 +84,21 @@
 %option debug
 %option warn
 %option nounput
+%option nodefault
 %option reentrant noyywrap never-interactive nounistd
 %option bison-bridge bison-locations
 %option noinput
 %option yylineno
 %option noyywrap
 
-%x comment
+%x comment string
 
 %%
 
 [/][/].*
-"/*" {
-    BEGIN(comment);
-};
+[ \t\n\r]+
 
+"/*" BEGIN(comment);
 <comment>{
     "*/" {
         BEGIN(INITIAL);
@@ -111,7 +114,97 @@
     }
 }
 
-[ \t\n\r\s]+
+\" {
+    str = new_dstring("");
+    BEGIN(string);
+}
+<string>{
+    \" {
+        yylval->dstr = str;
+        BEGIN(INITIAL);
+        return T_STRING;
+    }
+    [\n\r] {
+        yyerror(yylloc,
+            NULL,
+            filename,
+            NULL,
+            "unterminated string constant\n");
+        return T_ERROR;
+    }
+    \\n {
+        append_char(str, '\n');
+    }
+    \\r {
+        append_char(str, '\r');
+    }
+    \\b {
+        append_char(str, '\b');
+    }
+    \\t {
+        append_char(str, '\t');
+    }
+    \\a {
+        append_char(str, '\a');
+    }
+    \\v {
+        append_char(str, '\v');
+    }
+    \\f {
+        append_char(str, '\f');
+    }
+    \\\\ {
+        append_char(str, '\\');
+    }
+    \\[0-7]{1,3} {
+        unsigned int result;
+        sscanf(yytext+1, "%o", &result);
+        if (result > 0xff) {
+            char msg[40];
+            sprintf(msg, "invalid octal escape sequence: '%s'\n", yytext);
+            yyerror(yylloc,
+                NULL,
+                filename,
+                NULL,
+                msg);
+            return T_ERROR;
+        }
+        append_char(str, (char)result);
+    }
+    [^\\"]+ {
+        append_str(str, yytext);
+    }
+    \\[\n\r]+ {
+        append_str(str, yytext);
+    }
+    \\. {
+        char msg[40];
+        sprintf(msg, "invalid escape sequence: '%s'\n", yytext);
+        yyerror(yylloc,
+            NULL,
+            filename,
+            NULL,
+            msg);
+        return T_ERROR;
+    }
+    \\  {
+        yyerror(yylloc,
+            NULL,
+            filename,
+            NULL,
+            "dangling escape character in string constant\n");
+        return T_ERROR;
+    }
+    <<EOF>> {
+        yyerror(yylloc,
+            NULL,
+            filename,
+            NULL,
+            "end of file encountered inside string constant\n");
+        return T_ERROR;
+    }
+}
+
 class  { return T_CLASS; }
 func   { return T_FUNC; }
 new    { return T_NEW; }

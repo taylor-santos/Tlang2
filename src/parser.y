@@ -29,6 +29,7 @@
     #include "util.h"
     #include "types.h"
     #include "safe.h"
+    #include "dynamic_string.h"
 
     #ifndef YY_TYPEDEF_YY_SCANNER_T
     #define YY_TYPEDEF_YY_SCANNER_T
@@ -45,6 +46,7 @@
     AST *ast;
     Vector *vec;
     char *str;
+    dstring *dstr;
     long long int int_lit;
     double double_lit;
     Type *type;
@@ -73,7 +75,9 @@
                    T_INC        "++"
                    T_DEC        "--"
                    T_ERROR      "lexing error"
+                   END 0        "end of file"
 %token<str>        T_IDENT      "identifier"
+%token<dstr>       T_STRING     "string literal"
 %token<int_lit>    T_INT        "int literal"
 %token<double_lit> T_DOUBLE     "double literal"
 
@@ -148,6 +152,9 @@ PrimaryExpr:
   | T_DOUBLE {
         $$ = ASTDouble($1);
     }
+  | T_STRING {
+        $$ = ASTString($1);
+  }
   | Class
   | Func
   | Init

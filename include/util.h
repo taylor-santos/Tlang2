@@ -11,8 +11,9 @@
 #define WHITE   "\033[1m\033[37m"
 #define RESET   "\033[0m"
 #endif
-
 #define UNUSED __attribute__ ((unused))
+
+#include <stdint.h>
 
 int
 print_error(const char *fmt, ...);

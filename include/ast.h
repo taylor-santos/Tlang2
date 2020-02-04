@@ -8,6 +8,7 @@ typedef struct AST AST;
 struct AST;
 struct Vector;
 struct Type;
+struct dstring;
 
 void
 json_AST(const AST *this, FILE *out, int indent);
@@ -67,5 +68,9 @@ new_ASTInt(long long int val);
 #define ASTDouble(val) new_ASTDouble(val)
 AST *
 new_ASTDouble(double val);
+
+#define ASTString(str) new_ASTString(str)
+AST *
+new_ASTString(struct dstring *str);
 
 #endif

@@ -9,6 +9,11 @@ IntList := new List<int>();
 half := func(i: int) => float {
     return i / 2.;
 };
-
 halfList := IntList.map(half);
 
+Pair := class<T, S> {
+    first: T;
+    second: S;
+};
+
+text := "Hello, world!";

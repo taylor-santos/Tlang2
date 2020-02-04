@@ -2,6 +2,7 @@
 #include <getopt.h>
 #include <ctype.h> // isprint()
 #include <stdlib.h>
+#include <dynamic_string.h>
 #include "util.h"
 #include "parser.h"
 #include "scanner.h"

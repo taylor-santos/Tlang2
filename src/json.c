@@ -1,7 +1,9 @@
 #include <math.h>
+#include <ctype.h>
 #include "json.h"
 #include "util.h"
 #include "vector.h"
+#include "dynamic_string.h"
 
 static void
 print_indent(FILE *out, int indent) {
@@ -31,6 +33,29 @@ json_label(const char *label, FILE *out) {
 void
 json_string(const char *value, FILE *out, UNUSED int indent) {
     fprintf(out, "\"%s\"", (char *)value);
+}
+
+void
+json_dstring(const dstring *value, FILE *out, UNUSED int indent) {
+    fprintf(out, "\"");
+    for (size_t i = 0; i < value->size - 1; i++) {
+        char c = value->str[i];
+        if (isprint(c)) {
+            fprintf(out, "%c", c);
+        } else {
+            switch (c) {
+                case '\n':
+                    fprintf(out, "\\n");
+                    break;
+                case '\t':
+                    fprintf(out, "\\t");
+                    break;
+                default:
+                    fprintf(out, "\\%03o", c);
+            }
+        }
+    }
+    fprintf(out, "\"");
 }
 
 void

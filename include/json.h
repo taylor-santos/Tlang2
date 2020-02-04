@@ -6,6 +6,7 @@
 typedef void (*JSON_MAP_TYPE)(const void *, FILE *, int);
 
 struct Vector;
+struct dstring;
 
 void
 json_start(FILE *out, int *indent);
@@ -18,6 +19,9 @@ json_label(const char *label, FILE *out);
 
 void
 json_string(const char *value, FILE *out, int indent);
+
+void
+json_dstring(const struct dstring *value, FILE *out, int indent);
 
 void
 json_int(long long int value, FILE *out, int indent);
