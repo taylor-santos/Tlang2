@@ -38,6 +38,9 @@
 }
 
 %define api.pure full
+%define parse.error verbose
+%define parse.lac full
+%define parse.trace
 %locations
 %parse-param { AST **root }
 %param { const char *filename } { yyscan_t scanner }
@@ -59,6 +62,8 @@
                    T_RETURN     "return"
                    T_CONST      "const"
                    T_FRIEND     "friend"
+                   T_TRUE       "true"
+                   T_FALSE      "false"
                    T_DEF        ":="
                    T_ARROW      "=>"
                    T_MUL_ASSIGN "*="
@@ -74,6 +79,7 @@
                    T_GE         ">="
                    T_INC        "++"
                    T_DEC        "--"
+                   T_RANGE      ".."
                    T_ERROR      "lexing error"
                    END 0        "end of file"
 %token<str>        T_IDENT      "identifier"
@@ -83,11 +89,12 @@
 
 %type<ast>  File Statement Definition Expression Class NamedType Return
             OptExpression Func TypeOptNamed Init PrimaryExpr PostfixExpr
-            UnaryExpr OpExpr
+            UnaryExpr OpExpr TypeStmt
 %type<vec>  OptStatements Statements OptArgValues ArgValues OptGenerics
             IdentList OptInherits Inherits OptNamedTypes NamedTypes OptNamedArgs
-            NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers
-%type<type> Type TypeDef FuncDef
+            NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Variables Types
+            Tuple
+%type<type> Type TypeDef FuncDef TupleType
 %type<qualifier> Qualifier
 
 %left T_AND T_OR
@@ -100,50 +107,55 @@
 
 %%
 
-File:
-    OptStatements
+File
+  : OptStatements
     {
         *root = ASTProgram($1);
     }
 
-OptStatements:
-    %empty {
+OptStatements
+  : %empty {
         $$ = Vector();
     }
   | Statements
 
-Statements:
-    Statement {
+Statements
+  : Statement {
         $$ = init_Vector($1);
     }
   | Statements Statement {
-        $$ = $1;
-        Vector_append($$, $2);
+        $$ = Vector_append($1, $2);
     }
 
-Statement:
-    Definition ';'
+Statement
+  : Definition ';'
+  | TypeStmt ';'
   | Expression ';'
   | Return ';'
 
-Definition:
-    T_IDENT T_DEF Expression {
+Definition
+  : T_IDENT T_DEF Expression {
         $$ = ASTDefinition($1, $3);
     }
 
-Return:
-    T_RETURN OptExpression {
+TypeStmt
+  : Variables ':' Type {
+        $$ = ASTTypeStmt($1, $3);
+    }
+
+Return
+  : T_RETURN OptExpression {
         $$ = ASTReturn($2);
     }
 
-OptExpression:
-    %empty {
+OptExpression
+  : %empty {
         $$ = NULL;
     }
   | Expression
 
-PrimaryExpr:
-    T_IDENT {
+PrimaryExpr
+  : T_IDENT {
         $$ = ASTVariable($1);
     }
   | T_INT {
@@ -154,16 +166,40 @@ PrimaryExpr:
     }
   | T_STRING {
         $$ = ASTString($1);
-  }
+    }
+  | T_TRUE {
+        $$ = ASTBool(1);
+    }
+  | T_FALSE {
+        $$ = ASTBool(0);
+    }
   | Class
   | Func
   | Init
-  | '(' Expression ')' {
-        $$ = $2;
+  | '(' Tuple ')' {
+        $$ = ASTTuple($2);
     }
 
-PostfixExpr:
-    PrimaryExpr
+Variables
+  : T_IDENT {
+        $$ = init_Vector($1);
+    }
+  | Variables ',' T_IDENT {
+        $$ = Vector_append($1, $3);
+    }
+
+Tuple
+  : PrimaryExpr {
+        $$ = init_Vector($1);
+    }
+  | Tuple ',' PrimaryExpr {
+        $$ = Vector_append($1, $3);
+    }
+
+PostfixExpr
+  : Tuple {
+        $$ = ASTTuple($1);
+    }
   | PostfixExpr '.' T_IDENT {
         $$ = ASTMember($1, $3);
     }
@@ -171,8 +207,8 @@ PostfixExpr:
         $$ = ASTCall($1, $3);
     }
 
-UnaryExpr:
-    PostfixExpr
+UnaryExpr
+  : PostfixExpr
   | T_INC PostfixExpr {
         Vector *args = init_Vector($2);
         char *name = safe_strdup("++");
@@ -198,8 +234,8 @@ UnaryExpr:
         $$ = ASTCall(func, args);
     }
 
-OpExpr:
-    UnaryExpr
+OpExpr
+  : UnaryExpr
   | OpExpr '*' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("*");
@@ -279,8 +315,8 @@ OpExpr:
         $$ = ASTCall(method, args);
     }
 
-Expression:
-    OpExpr
+Expression
+  : OpExpr
   | UnaryExpr '=' Expression
   | UnaryExpr T_MUL_ASSIGN Expression
   | UnaryExpr T_DIV_ASSIGN Expression
@@ -288,75 +324,86 @@ Expression:
   | UnaryExpr T_ADD_ASSIGN Expression
   | UnaryExpr T_SUB_ASSIGN Expression
 
-Class:
-    T_CLASS OptGenerics OptInherits '{' OptNamedTypes '}' {
+Class
+  : T_CLASS OptGenerics OptInherits '{' OptNamedTypes '}' {
         $$ = ASTClass($2, $3, $5);
     }
 
-OptInherits:
-    %empty {
+OptInherits
+  : %empty {
         $$ = Vector();
     }
   | ':' Inherits {
         $$ = $2;
     }
 
-Inherits:
-    Type {
+Inherits
+  : Type {
         $$ = init_Vector($1);
     }
   | Inherits ',' Type {
-        $$ = $1;
-        Vector_append($$, $3);
+        $$ = Vector_append($1, $3);
     }
 
-OptNamedTypes:
-    %empty {
+OptNamedTypes
+  : %empty {
         $$ = Vector();
     }
   | NamedTypes
 
-NamedTypes:
-    NamedType ';' {
+NamedTypes
+  : NamedType ';' {
         $$ = init_Vector($1);
     }
   | NamedTypes NamedType ';' {
-        $$ = $1;
-        Vector_append($$, $2);
+        $$ = Vector_append($1, $2);
     }
 
-NamedType:
-    T_IDENT ':' Type {
+NamedType
+  : T_IDENT ':' Type {
         $$ = ASTNamedType($1, $3);
     }
 
-Type:
-    TypeDef
+Type
+  : TypeDef
   | Qualifiers TypeDef {
         $$ = $2;
         Type_setQualifiers($$, $1);
     }
 
-TypeDef:
-    T_IDENT OptGenerics {
+TypeDef
+  : T_IDENT OptGenerics {
         $$ = ClassType($1, $2);
     }
   | FuncDef
   | '[' Expression ']' OptGenerics {
         $$ = ExprType($2, $4);
     }
+  | TupleType
 
-Qualifiers:
-    Qualifier {
+TupleType
+  : '(' Types ')' {
+        $$ = TupleType($2);
+    }
+
+Types
+  : Type {
+        $$ = init_Vector($1);
+    }
+  | Types ',' Type {
+        $$ = Vector_append($1, $3);
+  }
+
+Qualifiers
+  : Qualifier {
         $$ = init_Vector($1);
     }
   | Qualifiers Qualifier {
-        $$ = $1;
-        Vector_append($$, $2);
+        $$ = Vector_append($1, $2);
     }
 
-Qualifier:
-    T_CONST {
+Qualifier
+  : T_CONST {
         $$ = safe_malloc(sizeof(*$$));
         *$$ = CONST;
     }
@@ -365,87 +412,83 @@ Qualifier:
         *$$ = FRIEND;
     }
 
-FuncDef:
-    T_FUNC OptGenerics '(' OptArgsOptNamed ')' T_ARROW Type {
+FuncDef
+  : T_FUNC OptGenerics '(' OptArgsOptNamed ')' T_ARROW Type {
         $$ = FuncType($2, $4, $7);
     }
 
-OptArgsOptNamed:
-    %empty {
+OptArgsOptNamed
+  : %empty {
         $$ = Vector();
     }
   | ArgsOptNamed
 
-ArgsOptNamed:
-    TypeOptNamed {
+ArgsOptNamed
+  : TypeOptNamed {
         $$ = init_Vector($1);
     }
   | ArgsOptNamed ',' TypeOptNamed {
-        $$ = $1;
-        Vector_append($1, $3);
+        $$ = Vector_append($1, $3);
     }
 
-TypeOptNamed:
-    NamedType
+TypeOptNamed
+  : NamedType
   | Type {
         $$ = ASTNamedType(safe_strdup(""), $1);
     }
 
-OptGenerics:
-    %empty {
+OptGenerics
+  : %empty {
         $$ = Vector();
     }
   | '<' IdentList '>' {
         $$ = $2;
     }
 
-Func:
-    T_FUNC OptGenerics '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
+Func
+  : T_FUNC OptGenerics '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
         $$ = ASTFunc($2, $4, $7, $9);
     }
 
-OptNamedArgs:
-    %empty {
+OptNamedArgs
+  : %empty {
         $$ = Vector();
     }
   | NamedArgs
 
-NamedArgs:
-    NamedType {
+NamedArgs
+  : NamedType {
         $$ = init_Vector($1);
     }
   | NamedArgs ',' NamedType {
-        $$ = $1;
-        Vector_append($$, $3);
+        $$ = Vector_append($1, $3);
     }
 
-Init:
-    T_NEW T_IDENT OptGenerics '(' OptArgValues ')' {
+Init
+  : T_NEW T_IDENT OptGenerics '(' OptArgValues ')' {
         $$ = ASTInit($2, $3, $5);
     }
 
-OptArgValues:
-    %empty {
+OptArgValues
+  : %empty {
         $$ = Vector();
     }
   | ArgValues
 
-ArgValues:
-    Expression {
+ArgValues
+  : Expression {
         $$ = init_Vector($1);
     }
   | ArgValues ',' Expression {
-        $$ = $1;
-        Vector_append($$, $3);
+        $$ = Vector_append($1, $3);
     }
 
-IdentList:
-    T_IDENT {
+IdentList
+  : T_IDENT {
         $$ = init_Vector($1);
     }
   | IdentList ',' T_IDENT {
-        $$ = $1;
-        Vector_append($$, $3);
+        $$ = Vector_append($1, $3);
     }
 
 %%
