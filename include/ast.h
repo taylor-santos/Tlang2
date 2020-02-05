@@ -15,6 +15,9 @@ void
 json_AST(const AST *this, FILE *out, int indent);
 
 void
+error_AST(const AST *this, const char *msg, FILE *out);
+
+void
 delete_AST(AST *this);
 
 #define ASTProgram(loc, stmts) \

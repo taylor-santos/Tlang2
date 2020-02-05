@@ -31,6 +31,34 @@
     #include "safe.h"
     #include "dynamic_string.h"
 
+    #define YYLTYPE YYLTYPE
+    typedef struct YYLTYPE {
+        int first_line;
+        int first_column;
+        int last_line;
+        int last_column;
+        const char *filename;
+    } YYLTYPE;
+
+    # define YYLLOC_DEFAULT(Cur, Rhs, N)                      \
+    do {                                                      \
+      if (N)                                                  \
+        {                                                     \
+          (Cur).first_line   = YYRHSLOC(Rhs, 1).first_line;   \
+          (Cur).first_column = YYRHSLOC(Rhs, 1).first_column; \
+          (Cur).last_line    = YYRHSLOC(Rhs, N).last_line;    \
+          (Cur).last_column  = YYRHSLOC(Rhs, N).last_column;  \
+        }                                                     \
+      else                                                    \
+        {                                                     \
+          (Cur).first_line   = (Cur).last_line   =            \
+            YYRHSLOC(Rhs, 0).last_line;                       \
+          (Cur).first_column = (Cur).last_column =            \
+            YYRHSLOC(Rhs, 0).last_column;                     \
+        }                                                     \
+      (Cur).filename = YYRHSLOC(Rhs, 1).filename;             \
+    } while (0)
+
     #ifndef YY_TYPEDEF_YY_SCANNER_T
     #define YY_TYPEDEF_YY_SCANNER_T
     typedef void* yyscan_t;
@@ -44,6 +72,12 @@
 %locations
 %parse-param { AST **root }
 %param { const char *filename } { yyscan_t scanner }
+
+%initial-action {
+    @$ = (YYLTYPE) {
+        1, 1, 1, 1, filename
+    };
+}
 
 %union {
     AST *ast;
