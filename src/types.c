@@ -6,7 +6,7 @@
 #include "ast.h"
 
 typedef enum Types {
-    FUNC, CLASS, EXPR
+    FUNC, CLASS, EXPR, TUPLE
 } Types;
 
 struct FuncType {
@@ -25,6 +25,10 @@ struct ExprType {
     Vector *generics; // Vector<char*>
 };
 
+struct TupleType {
+    Vector *types; // Vector<Type*>
+};
+
 struct Type {
     Types type;
     Vector *qualifiers; // Vector<Qualifiers*>
@@ -32,6 +36,7 @@ struct Type {
         struct FuncType func;
         struct ClassType class;
         struct ExprType expr;
+        struct TupleType tuple;
     };
 };
 
@@ -48,6 +53,9 @@ json_type(const Type *type, FILE *out, int indent) {
             break;
         case EXPR:
             json_string("expression", out, indent);
+            break;
+        case TUPLE:
+            json_string("tuple", out, indent);
             break;
     }
     if (NULL != type->qualifiers) {
@@ -95,12 +103,20 @@ json_type(const Type *type, FILE *out, int indent) {
                 out,
                 indent);
             break;
+        case TUPLE:
+            json_comma(out, indent);
+            json_label("types", out);
+            json_list(type->tuple.types,
+                (JSON_MAP_TYPE)json_type,
+                out,
+                indent);
+            break;
     }
     json_end(out, &indent);
 }
 
 void
-json_qualifier(Qualifiers *value, FILE *out, int indent) {
+json_qualifier(const Qualifiers *value, FILE *out, int indent) {
     switch (*value) {
         case CONST:
             json_string("const", out, indent);
@@ -126,6 +142,9 @@ delete_type(Type *type) {
         case EXPR:
             delete_AST(type->expr.expr);
             delete_Vector(type->expr.generics, free);
+            break;
+        case TUPLE:
+            delete_Vector(type->tuple.types, (VEC_DELETE_TYPE)delete_type);
             break;
     }
     if (NULL != type->qualifiers) {
@@ -173,6 +192,19 @@ new_ExprType(AST *expr, Vector *generics) {
     *t = (Type){
         EXPR, NULL, .expr = {
             expr, generics
+        }
+    };
+    return t;
+}
+
+Type *
+new_TupleType(Vector *types) {
+    Type *t;
+
+    t = safe_malloc(sizeof(*t));
+    *t = (Type){
+        TUPLE, NULL, .tuple = {
+            types
         }
     };
     return t;

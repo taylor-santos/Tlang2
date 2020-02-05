@@ -211,6 +211,8 @@ new    { return T_NEW; }
 return { return T_RETURN; }
 const  { return T_CONST; }
 friend { return T_FRIEND; }
+true   { return T_TRUE; }
+false  { return T_FALSE; }
 [:][=] { return T_DEF; }
 [=][>] { return T_ARROW; }
 [*][=] { return T_MUL_ASSIGN; }
@@ -226,6 +228,7 @@ friend { return T_FRIEND; }
 [>][=] { return T_GE; }
 [+][+] { return T_INC; }
 [-][-] { return T_DEC; }
+[.][.] { return T_RANGE; }
 [;{}<>:()[\]]  {
     return *yytext;
 }

@@ -4,12 +4,14 @@
 #include "json.h"
 #include "vector.h"
 #include "types.h"
+#include "parser.h"
 
 typedef struct ASTFunc ASTFunc;
 
 struct ASTFunc {
     void (*json)(const ASTFunc *this, FILE *out, int indent);
     void (*delete)(ASTFunc *this);
+    struct YYLTYPE loc;
     Vector *generics; // Vector<char*>
     Vector *args;     // Vector<AST*> TODO TypeDef
     Type *ret_type;
@@ -46,12 +48,16 @@ delete(ASTFunc *this) {
 }
 
 AST *
-new_ASTFunc(Vector *generics, Vector *args, Type *ret_type, Vector *stmts) {
+new_ASTFunc(struct YYLTYPE *loc,
+    Vector *generics,
+    Vector *args,
+    Type *ret_type,
+    Vector *stmts) {
     ASTFunc *func = NULL;
 
     func = safe_malloc(sizeof(*func));
     *func = (ASTFunc){
-        json, delete, generics, args, ret_type, stmts
+        json, delete, *loc, generics, args, ret_type, stmts
     };
     return (AST *)func;
 }

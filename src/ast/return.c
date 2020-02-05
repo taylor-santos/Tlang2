@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include "safe.h"
 #include "json.h"
+#include "parser.h"
 
 typedef struct ASTReturn ASTReturn;
 
 struct ASTReturn {
     void (*json)(const ASTReturn *this, FILE *out, int indent);
     void (*delete)(ASTReturn *this);
+    struct YYLTYPE loc;
     AST *expr;
 };
 
@@ -31,12 +33,12 @@ delete(ASTReturn *this) {
 }
 
 AST *
-new_ASTReturn(AST *expr) {
+new_ASTReturn(struct YYLTYPE *loc, AST *expr) {
     ASTReturn *ret = NULL;
 
     ret = safe_malloc(sizeof(*ret));
     *ret = (ASTReturn){
-        json, delete, expr
+        json, delete, *loc, expr
     };
     return (AST *)ret;
 }

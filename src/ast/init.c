@@ -3,6 +3,7 @@
 #include "safe.h"
 #include "json.h"
 #include "vector.h"
+#include "parser.h"
 
 typedef struct ASTInit ASTInit;
 
@@ -11,9 +12,10 @@ struct Vector;
 struct ASTInit {
     void (*json)(const ASTInit *this, FILE *out, int indent);
     void (*delete)(ASTInit *this);
+    struct YYLTYPE loc;
     char *name;
     Vector *generics; // Vector<char*>
-    Vector *args;     // Vector<AST*>
+    AST *args;        // NULLable
 };
 
 static void
@@ -27,9 +29,11 @@ json(const ASTInit *this, FILE *out, int indent) {
     json_comma(out, indent);
     json_label("generics", out);
     json_list(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
-    json_comma(out, indent);
-    json_label("args", out);
-    json_list(this->args, (JSON_MAP_TYPE)json_AST, out, indent);
+    if (NULL != this->args) {
+        json_comma(out, indent);
+        json_label("args", out);
+        json_AST(this->args, out, indent);
+    }
     json_end(out, &indent);
 }
 
@@ -37,17 +41,19 @@ static void
 delete(ASTInit *this) {
     free(this->name);
     delete_Vector(this->generics, free);
-    delete_Vector(this->args, (VEC_DELETE_TYPE)delete_AST);
+    if (NULL != this->args) {
+        delete_AST(this->args);
+    }
     free(this);
 }
 
 AST *
-new_ASTInit(char *name, Vector *generics, Vector *args) {
+new_ASTInit(struct YYLTYPE *loc, char *name, Vector *generics, AST *args) {
     ASTInit *init = NULL;
 
     init = safe_malloc(sizeof(*init));
     *init = (ASTInit){
-        json, delete, name, generics, args
+        json, delete, *loc, name, generics, args
     };
     return (AST *)init;
 }

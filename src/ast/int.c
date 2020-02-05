@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include "safe.h"
 #include "json.h"
+#include "parser.h"
 
 typedef struct ASTInt ASTInt;
 
 struct ASTInt {
     void (*json)(const ASTInt *this, FILE *out, int indent);
     void (*delete)(ASTInt *this);
+    struct YYLTYPE loc;
     long long int val;
 };
 
@@ -28,12 +30,12 @@ delete(ASTInt *this) {
 }
 
 AST *
-new_ASTInt(long long int val) {
+new_ASTInt(struct YYLTYPE *loc, long long int val) {
     ASTInt *node = NULL;
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
-        json, delete, val
+        json, delete, *loc, val
     };
     return (AST *)node;
 }

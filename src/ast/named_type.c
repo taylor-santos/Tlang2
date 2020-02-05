@@ -3,12 +3,14 @@
 #include "safe.h"
 #include "json.h"
 #include "types.h"
+#include "parser.h"
 
 typedef struct ASTNamedType ASTNamedType;
 
 struct ASTNamedType {
     void (*json)(const ASTNamedType *this, FILE *out, int indent);
     void (*delete)(ASTNamedType *this);
+    struct YYLTYPE loc;
     char *name;
     Type *type;
 };
@@ -35,12 +37,12 @@ delete(ASTNamedType *this) {
 }
 
 AST *
-new_ASTNamedType(char *name, Type *type) {
+new_ASTNamedType(struct YYLTYPE *loc, char *name, Type *type) {
     ASTNamedType *named_type = NULL;
 
     named_type = safe_malloc(sizeof(*named_type));
     *named_type = (ASTNamedType){
-        json, delete, name, type
+        json, delete, *loc, name, type
     };
     return (AST *)named_type;
 }

@@ -3,14 +3,16 @@
 #include "safe.h"
 #include "json.h"
 #include "vector.h"
+#include "parser.h"
 
 typedef struct ASTCall ASTCall;
 
 struct ASTCall {
     void (*json)(const ASTCall *this, FILE *out, int indent);
     void (*delete)(ASTCall *this);
+    struct YYLTYPE loc;
     AST *expr;
-    Vector *args; // Vector<AST*>
+    AST *args; // NULLable
 };
 
 static void
@@ -21,26 +23,30 @@ json(const ASTCall *this, FILE *out, int indent) {
     json_comma(out, indent);
     json_label("expr", out);
     json_AST(this->expr, out, indent);
-    json_comma(out, indent);
-    json_label("args", out);
-    json_list(this->args, (JSON_MAP_TYPE)json_AST, out, indent);
+    if (NULL != this->args) {
+        json_comma(out, indent);
+        json_label("args", out);
+        json_AST(this->args, out, indent);
+    }
     json_end(out, &indent);
 }
 
 static void
 delete(ASTCall *this) {
     delete_AST(this->expr);
-    delete_Vector(this->args, (VEC_DELETE_TYPE)delete_AST);
+    if (NULL != this->args) {
+        delete_AST(this->args);
+    }
     free(this);
 }
 
 AST *
-new_ASTCall(AST *expr, Vector *args) {
+new_ASTCall(struct YYLTYPE *loc, AST *expr, AST *args) {
     ASTCall *call = NULL;
 
     call = safe_malloc(sizeof(*call));
     *call = (ASTCall){
-        json, delete, expr, args
+        json, delete, *loc, expr, args
     };
     return (AST *)call;
 }

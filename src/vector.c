@@ -14,7 +14,7 @@ struct Vector {
     size_t size;
 };
 
-int
+Vector *
 Vector_append(Vector *this, void *element) {
     if (this->size == this->capacity) {
         size_t new_capacity = this->capacity + REALLOC_SIZE;
@@ -24,13 +24,13 @@ Vector_append(Vector *this, void *element) {
                 perror("realloc");
                 exit(EXIT_FAILURE);
             } else {
-                return 1;
+                return NULL;
             }
         }
         this->capacity = new_capacity;
     }
     this->items[this->size++] = element;
-    return 0;
+    return this;
 }
 
 int

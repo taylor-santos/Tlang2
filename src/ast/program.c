@@ -3,12 +3,14 @@
 #include "safe.h"
 #include "vector.h"
 #include "json.h"
+#include "parser.h"
 
 typedef struct ASTProgram ASTProgram;
 
 struct ASTProgram {
     void (*json)(const ASTProgram *this, FILE *out, int indent);
     void (*delete)(ASTProgram *this);
+    struct YYLTYPE loc;
     Vector *stmts; // Vector<AST*>
 };
 
@@ -30,12 +32,12 @@ delete(ASTProgram *this) {
 }
 
 AST *
-new_ASTProgram(Vector *stmts) {
+new_ASTProgram(struct YYLTYPE *loc, Vector *stmts) {
     ASTProgram *program = NULL;
 
     program = safe_malloc(sizeof(*program));
     *program = (ASTProgram){
-        json, delete, stmts
+        json, delete, *loc, stmts
     };
     return (AST *)program;
 }

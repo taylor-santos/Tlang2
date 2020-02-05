@@ -9,6 +9,7 @@ struct AST;
 struct Vector;
 struct Type;
 struct dstring;
+struct YYLTYPE;
 
 void
 json_AST(const AST *this, FILE *out, int indent);
@@ -16,61 +17,99 @@ json_AST(const AST *this, FILE *out, int indent);
 void
 delete_AST(AST *this);
 
-#define ASTProgram(stmts) new_ASTProgram(stmts)
+#define ASTProgram(loc, stmts) \
+    new_ASTProgram(loc, stmts)
 AST *
-new_ASTProgram(struct Vector *stmts);
+new_ASTProgram(struct YYLTYPE *loc, struct Vector *stmts);
 
-#define ASTDefinition(ident, expr) new_ASTDefinition(ident, expr)
+#define ASTDefinition(loc, vars, expr) \
+    new_ASTDefinition(loc, vars, expr)
 AST *
-new_ASTDefinition(char *ident, AST *expr);
+new_ASTDefinition(struct YYLTYPE *loc, AST *vars, AST *expr);
 
-#define ASTVariable(name) new_ASTVariable(name)
+#define ASTVariable(loc, name) \
+    new_ASTVariable(loc, name)
 AST *
-new_ASTVariable(char *name);
+new_ASTVariable(struct YYLTYPE *loc, char *name);
 
-#define ASTMember(expr, name) new_ASTMember(expr, name)
+#define ASTMember(loc, expr, name) \
+    new_ASTMember(loc, expr, name)
 AST *
-new_ASTMember(AST *expr, char *name);
+new_ASTMember(struct YYLTYPE *loc, AST *expr, char *name);
 
-#define ASTCall(expr, args) new_ASTCall(expr, args)
+#define ASTCall(loc, expr, args) \
+    new_ASTCall(loc, expr, args)
 AST *
-new_ASTCall(AST *expr, struct Vector *args);
+new_ASTCall(struct YYLTYPE *loc, AST *expr, AST *args);
 
-#define ASTClass(gen, inherit, members) new_ASTClass(gen, inherit, members)
+#define ASTIndex(loc, expr, index) \
+    new_ASTIndex(loc, expr, index)
 AST *
-new_ASTClass(struct Vector *generics,
+new_ASTIndex(struct YYLTYPE *loc, AST *expr, AST *index);
+
+#define ASTClass(loc, gen, inherit, members) \
+    new_ASTClass(loc, gen, inherit, members)
+AST *
+new_ASTClass(struct YYLTYPE *loc,
+    struct Vector *generics,
     struct Vector *inherits,
     struct Vector *members);
 
-#define ASTReturn(expr) new_ASTReturn(expr)
+#define ASTReturn(loc, expr) \
+    new_ASTReturn(loc, expr)
 AST *
-new_ASTReturn(AST *expr);
+new_ASTReturn(struct YYLTYPE *loc, AST *expr);
 
-#define ASTFunc(gen, args, ret, stmts) new_ASTFunc(gen, args, ret, stmts)
+#define ASTFunc(loc, gen, args, ret, stmts) \
+    new_ASTFunc(loc, gen, args, ret, stmts)
 AST *
-new_ASTFunc(struct Vector *generics,
+new_ASTFunc(struct YYLTYPE *loc,
+    struct Vector *generics,
     struct Vector *args,
     struct Type *ret_type,
     struct Vector *stmts);
 
-#define ASTNamedType(name, type) new_ASTNamedType(name, type)
+#define ASTNamedType(loc, name, type) \
+    new_ASTNamedType(loc, name, type)
 AST *
-new_ASTNamedType(char *name, struct Type *type);
+new_ASTNamedType(struct YYLTYPE *loc, char *name, struct Type *type);
 
-#define ASTInit(name, gen, args) new_ASTInit(name, gen, args)
+#define ASTTypeStmt(loc, var, type) \
+    new_ASTTypeStmt(loc, var, type)
 AST *
-new_ASTInit(char *name, struct Vector *generics, struct Vector *args);
+new_ASTTypeStmt(struct YYLTYPE *loc, char *var, struct Type *type);
 
-#define ASTInt(val) new_ASTInt(val)
+#define ASTInit(loc, name, gen, args) \
+    new_ASTInit(loc, name, gen, args)
 AST *
-new_ASTInt(long long int val);
+new_ASTInit(struct YYLTYPE *loc,
+    char *name,
+    struct Vector *generics,
+    AST *args);
 
-#define ASTDouble(val) new_ASTDouble(val)
+#define ASTTuple(loc, exprs) \
+    new_ASTTuple(loc, exprs)
 AST *
-new_ASTDouble(double val);
+new_ASTTuple(struct YYLTYPE *loc, struct Vector *exprs);
 
-#define ASTString(str) new_ASTString(str)
+#define ASTInt(loc, val) \
+    new_ASTInt(loc, val)
 AST *
-new_ASTString(struct dstring *str);
+new_ASTInt(struct YYLTYPE *loc, long long int val);
+
+#define ASTDouble(loc, val) \
+    new_ASTDouble(loc, val)
+AST *
+new_ASTDouble(struct YYLTYPE *loc, double val);
+
+#define ASTString(loc, str) \
+    new_ASTString(loc, str)
+AST *
+new_ASTString(struct YYLTYPE *loc, struct dstring *str);
+
+#define ASTBool(loc, val) \
+    new_ASTBool(loc, val)
+AST *
+new_ASTBool(struct YYLTYPE *loc, int val);
 
 #endif

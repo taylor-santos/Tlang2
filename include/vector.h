@@ -18,7 +18,7 @@ typedef void (*VEC_DELETE_TYPE)(void *);
  * message is printed to stderr and the program exits. Otherwise if an error
  * occurs and ERROR_MODE is VEC_
  */
-int
+Vector *
 Vector_append(Vector *this, void *element);
 
 /*

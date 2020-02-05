@@ -3,12 +3,14 @@
 #include "safe.h"
 #include "json.h"
 #include "dynamic_string.h"
+#include "parser.h"
 
 typedef struct ASTString ASTString;
 
 struct ASTString {
     void (*json)(const ASTString *this, FILE *out, int indent);
     void (*delete)(ASTString *this);
+    struct YYLTYPE loc;
     dstring *str;
 };
 
@@ -30,12 +32,12 @@ delete(ASTString *this) {
 }
 
 AST *
-new_ASTString(dstring *str) {
+new_ASTString(struct YYLTYPE *loc, dstring *str) {
     ASTString *node = NULL;
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
-        json, delete, str
+        json, delete, *loc, str
     };
     return (AST *)node;
 }

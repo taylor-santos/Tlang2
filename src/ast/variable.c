@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include "safe.h"
 #include "json.h"
+#include "parser.h"
 
 typedef struct ASTVariable ASTVariable;
 
 struct ASTVariable {
     void (*json)(const ASTVariable *this, FILE *out, int indent);
     void (*delete)(ASTVariable *this);
+    struct YYLTYPE loc;
     char *name;
 };
 
@@ -29,12 +31,12 @@ delete(ASTVariable *this) {
 }
 
 AST *
-new_ASTVariable(char *name) {
+new_ASTVariable(struct YYLTYPE *loc, char *name) {
     ASTVariable *variable = NULL;
 
     variable = safe_malloc(sizeof(*variable));
     *variable = (ASTVariable){
-        json, delete, name
+        json, delete, *loc, name
     };
     return (AST *)variable;
 }

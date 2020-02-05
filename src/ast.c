@@ -1,10 +1,12 @@
 #include "ast.h"
+#include "parser.h"
 
 typedef struct ASTData ASTData;
 
 struct AST {
     void (*json)(const AST *this, FILE *out, int indent);
     void (*delete)(AST *this);
+    struct YYLTYPE loc;
 };
 
 void
