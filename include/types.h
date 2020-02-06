@@ -9,7 +9,7 @@ struct Vector;
 struct AST;
 
 typedef enum Qualifiers {
-    CONST = 0x1, FRIEND = 0x2
+    Q_CONST = 0x1, Q_FRIEND = 0x2
 } Qualifiers;
 
 void

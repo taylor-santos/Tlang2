@@ -2,12 +2,19 @@
 #include <getopt.h>
 #include <ctype.h> // isprint()
 #include <stdlib.h>
-#include <dynamic_string.h>
 #include "util.h"
 #include "parser.h"
 #include "scanner.h"
 #include "ast.h"
 #include "safe.h"
+
+#ifdef _WIN32
+#include <windows.h>
+
+HANDLE handle;
+CONSOLE_SCREEN_BUFFER_INFO console;
+WORD saved_attributes;
+#endif
 
 #define DEFAULT_OUTPUT "a.out.c"
 
@@ -18,6 +25,12 @@ main(int argc, char *argv[]) {
     yyscan_t scanner;
     YY_BUFFER_STATE state;
     FILE *output;
+
+    #ifdef _WIN32_IE
+    handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(handle, &console);
+    saved_attributes = console.wAttributes;
+    #endif
 
     opterr = 0;
     while (-1 != (opt = getopt(argc, argv, ":o:"))) {

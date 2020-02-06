@@ -118,10 +118,10 @@ json_type(const Type *type, FILE *out, int indent) {
 void
 json_qualifier(const Qualifiers *value, FILE *out, int indent) {
     switch (*value) {
-        case CONST:
+        case Q_CONST:
             json_string("const", out, indent);
             break;
-        case FRIEND:
+        case Q_FRIEND:
             json_string("friend", out, indent);
             break;
     }

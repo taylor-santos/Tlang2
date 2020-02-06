@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(compiler C)
+project(tlang2 C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic -Wextra")
@@ -20,7 +20,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR} include)
 
 file(GLOB_RECURSE SRC "src/*.c")
 
-add_executable(compiler
+add_executable(tlang2
         ${BISON_Parser_OUTPUTS}
         ${FLEX_Scanner_OUTPUTS}
         ${SRC})

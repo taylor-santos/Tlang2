@@ -433,11 +433,11 @@ Qualifiers
 Qualifier
   : T_CONST {
         $$ = safe_malloc(sizeof(*$$));
-        *$$ = CONST;
+        *$$ = Q_CONST;
     }
   | T_FRIEND {
         $$ = safe_malloc(sizeof(*$$));
-        *$$ = FRIEND;
+        *$$ = Q_FRIEND;
     }
 
 FuncDef
@@ -510,15 +510,9 @@ IdentList
 
 void yyerror(YYLTYPE *locp,
     UNUSED AST **root,
-    const char *filename,
+    UNUSED const char *filename,
     UNUSED yyscan_t scanner,
     const char *msg
 ) {
-    fprintf(stderr,
-        "%s:%d:%d: " RED "error: " RESET "%s",
-        filename,
-        locp->first_line,
-        locp->first_column,
-        msg
-    );
+    print_code_error(locp, msg, stderr);
 }
