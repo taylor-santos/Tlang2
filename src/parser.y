@@ -40,24 +40,8 @@
         const char *filename;
     } YYLTYPE;
 
-    # define YYLLOC_DEFAULT(Cur, Rhs, N)                      \
-    do {                                                      \
-      if (N)                                                  \
-        {                                                     \
-          (Cur).first_line   = YYRHSLOC(Rhs, 1).first_line;   \
-          (Cur).first_column = YYRHSLOC(Rhs, 1).first_column; \
-          (Cur).last_line    = YYRHSLOC(Rhs, N).last_line;    \
-          (Cur).last_column  = YYRHSLOC(Rhs, N).last_column;  \
-        }                                                     \
-      else                                                    \
-        {                                                     \
-          (Cur).first_line   = (Cur).last_line   =            \
-            YYRHSLOC(Rhs, 0).last_line;                       \
-          (Cur).first_column = (Cur).last_column =            \
-            YYRHSLOC(Rhs, 0).last_column;                     \
-        }                                                     \
-      (Cur).filename = YYRHSLOC(Rhs, 1).filename;             \
-    } while (0)
+    # define YYLLOC_DEFAULT(Cur, Rhs, N)                                    \
+        (Cur).filename = YYRHSLOC(Rhs, 1).filename;
 
     #ifndef YY_TYPEDEF_YY_SCANNER_T
     #define YY_TYPEDEF_YY_SCANNER_T
@@ -67,7 +51,6 @@
 
 %define api.pure full
 %define parse.error verbose
-%define parse.lac full
 %define parse.trace
 %locations
 %parse-param { AST **root }
