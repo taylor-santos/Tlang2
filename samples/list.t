@@ -32,3 +32,15 @@ foo();
 
 t: (int, int..5, string);
 
+Foo := class {
+    x: int;
+    y: string;
+};
+
+impl Foo {
+    Foo := func() {
+        x := 0;
+        y := "Foo";
+    };
+};
+

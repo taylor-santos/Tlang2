@@ -8,6 +8,7 @@ typedef struct ASTDefinition ASTDefinition;
 
 struct ASTDefinition {
     void (*json)(const ASTDefinition *this, FILE *out, int indent);
+    int (*getType)(const ASTDefinition *this, Type **typeptr);
     void (*delete)(ASTDefinition *this);
     struct YYLTYPE loc;
     AST *vars;
@@ -28,6 +29,12 @@ json(const ASTDefinition *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTDefinition *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc, "def type checker not implemented", stderr);
+    return 1;
+}
+
 static void
 delete(ASTDefinition *this) {
     delete_AST(this->vars);
@@ -41,7 +48,7 @@ new_ASTDefinition(struct YYLTYPE *loc, AST *vars, AST *expr) {
 
     definition = safe_malloc(sizeof(*definition));
     *definition = (ASTDefinition){
-        json, delete, *loc, vars, expr
+        json, getType, delete, *loc, vars, expr
     };
     return (AST *)definition;
 }

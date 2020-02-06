@@ -8,6 +8,7 @@ typedef struct ASTInt ASTInt;
 
 struct ASTInt {
     void (*json)(const ASTInt *this, FILE *out, int indent);
+    int (*getType)(const ASTInt *this, Type **typeptr);
     void (*delete)(ASTInt *this);
     struct YYLTYPE loc;
     long long int val;
@@ -24,6 +25,12 @@ json(const ASTInt *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTInt *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc, "bool type checker not implemented", stderr);
+    return 1;
+}
+
 static void
 delete(ASTInt *this) {
     free(this);
@@ -35,7 +42,7 @@ new_ASTInt(struct YYLTYPE *loc, long long int val) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
-        json, delete, *loc, val
+        json, getType, delete, *loc, val
     };
     return (AST *)node;
 }

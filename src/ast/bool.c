@@ -8,6 +8,7 @@ typedef struct ASTBool ASTBool;
 
 struct ASTBool {
     void (*json)(const ASTBool *this, FILE *out, int indent);
+    int (*getType)(const ASTBool *this, Type **typeptr);
     void (*delete)(ASTBool *this);
     struct YYLTYPE loc;
     int val;
@@ -28,6 +29,12 @@ json(const ASTBool *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTBool *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc, "bool type checker not implemented", stderr);
+    return 1;
+}
+
 static void
 delete(ASTBool *this) {
     free(this);
@@ -39,7 +46,7 @@ new_ASTBool(struct YYLTYPE *loc, int val) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTBool){
-        json, delete, *loc, val
+        json, getType, delete, *loc, val
     };
     return (AST *)node;
 }

@@ -98,6 +98,10 @@ main(int argc, char *argv[]) {
         } else {
             //Type checking, code generation, etc...
             json_AST(root, stdout, 0);
+            fprintf(stdout, "\n");
+            if (getType_AST(root, NULL)) {
+                print_error("type checker failed");
+            }
             delete_AST(root);
         }
         yy_delete_buffer(state, scanner);

@@ -182,6 +182,7 @@
 
 class  { return T_CLASS; }
 func   { return T_FUNC; }
+impl   { return T_IMPL; }
 new    { return T_NEW; }
 return { return T_RETURN; }
 const  { return T_CONST; }

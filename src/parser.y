@@ -41,8 +41,24 @@
         const char *filename;
     } YYLTYPE;
 
-    # define YYLLOC_DEFAULT(Cur, Rhs, N)                                    \
-        (Cur).filename = YYRHSLOC(Rhs, 1).filename;
+    # define YYLLOC_DEFAULT(Cur, Rhs, N)                            \
+        do {                                                        \
+          if (N)                                                    \
+            {                                                       \
+              (Cur).first_line   = YYRHSLOC(Rhs, 1).first_line;     \
+              (Cur).first_column = YYRHSLOC(Rhs, 1).first_column;   \
+              (Cur).last_line    = YYRHSLOC(Rhs, N).last_line;      \
+              (Cur).last_column  = YYRHSLOC(Rhs, N).last_column;    \
+            }                                                       \
+          else                                                      \
+            {                                                       \
+              (Cur).first_line   = (Cur).last_line   =              \
+                YYRHSLOC(Rhs, 0).last_line;                         \
+              (Cur).first_column = (Cur).last_column =              \
+                YYRHSLOC(Rhs, 0).last_column;                       \
+            }                                                       \
+          (Cur).filename = YYRHSLOC(Rhs, 1).filename;               \
+        } while (0)
 
     #ifndef YY_TYPEDEF_YY_SCANNER_T
     #define YY_TYPEDEF_YY_SCANNER_T
@@ -77,6 +93,7 @@
 
 %token             T_CLASS      "class"
                    T_FUNC       "func"
+                   T_IMPL       "impl"
                    T_NEW        "new"
                    T_RETURN     "return"
                    T_CONST      "const"
@@ -108,12 +125,12 @@
 
 %type<ast>  File Statement Definition Expression Class Field Return
             OptExpression Func TypeOptNamed Init PrimaryExpr PostfixExpr
-            UnaryExpr OpExpr TypeStmt NamedArg
+            UnaryExpr OpExpr TypeStmt NamedArg Impl
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
             OptFields Fields OptNamedArgs NamedArgs OptArgsOptNamed
             ArgsOptNamed Qualifiers Tuple
 %type<svec> Types
-%type<type> Type TypeDef FuncDef
+%type<type> Type TypeDef FuncDef OptRetType
 %type<qualifier> Qualifier
 
 %left T_AND T_OR
@@ -148,6 +165,7 @@ Statements
 
 Statement
   : Definition ';'
+  | Impl ';'
   | TypeStmt ';'
   | Expression ';'
   | Return ';'
@@ -343,6 +361,11 @@ Class
         $$ = ASTClass(&@$, $2, $3, $5);
     }
 
+Impl
+  : T_IMPL T_IDENT OptGenerics '{' OptStatements '}' {
+        $$ = ASTImpl(&@$, $2, $3, $5);
+    }
+
 OptInherits
   : %empty {
         $$ = Vector();
@@ -436,8 +459,16 @@ Qualifier
     }
 
 FuncDef
-  : T_FUNC OptGenerics '(' OptArgsOptNamed ')' T_ARROW Type {
-        $$ = FuncType($2, $4, $7);
+  : T_FUNC OptGenerics '(' OptArgsOptNamed ')' OptRetType {
+        $$ = FuncType($2, $4, $6);
+    }
+
+OptRetType
+  : %empty {
+        $$ = NULL;
+    }
+  | T_ARROW Type {
+        $$ = $2;
     }
 
 OptArgsOptNamed
@@ -471,8 +502,8 @@ OptGenerics
     }
 
 Func
-  : T_FUNC OptGenerics '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
-        $$ = ASTFunc(&@$, $2, $4, $7, $9);
+  : T_FUNC OptGenerics '(' OptNamedArgs ')' OptRetType '{' OptStatements '}' {
+        $$ = ASTFunc(&@$, $2, $4, $6, $8);
     }
 
 OptNamedArgs

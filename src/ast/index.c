@@ -9,6 +9,7 @@ typedef struct ASTIndex ASTIndex;
 
 struct ASTIndex {
     void (*json)(const ASTIndex *this, FILE *out, int indent);
+    int (*getType)(const ASTIndex *this, Type **typeptr);
     void (*delete)(ASTIndex *this);
     struct YYLTYPE loc;
     AST *expr;
@@ -29,6 +30,12 @@ json(const ASTIndex *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTIndex *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc, "index type checker not implemented", stderr);
+    return 1;
+}
+
 static void
 delete(ASTIndex *this) {
     delete_AST(this->expr);
@@ -42,7 +49,7 @@ new_ASTIndex(struct YYLTYPE *loc, AST *expr, AST *index) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTIndex){
-        json, delete, *loc, expr, index
+        json, getType, delete, *loc, expr, index
     };
     return (AST *)node;
 }

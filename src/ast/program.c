@@ -9,6 +9,7 @@ typedef struct ASTProgram ASTProgram;
 
 struct ASTProgram {
     void (*json)(const ASTProgram *this, FILE *out, int indent);
+    int (*getType)(const ASTProgram *this, Type **typeptr);
     void (*delete)(ASTProgram *this);
     struct YYLTYPE loc;
     Vector *stmts; // Vector<AST*>
@@ -25,6 +26,14 @@ json(const ASTProgram *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTProgram *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc,
+        "program type checker not implemented",
+        stderr);
+    return 1;
+}
+
 static void
 delete(ASTProgram *this) {
     delete_Vector(this->stmts, (VEC_DELETE_TYPE)delete_AST);
@@ -37,7 +46,7 @@ new_ASTProgram(struct YYLTYPE *loc, Vector *stmts) {
 
     program = safe_malloc(sizeof(*program));
     *program = (ASTProgram){
-        json, delete, *loc, stmts
+        json, getType, delete, *loc, stmts
     };
     return (AST *)program;
 }

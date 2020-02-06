@@ -8,6 +8,7 @@ typedef struct ASTMember ASTMember;
 
 struct ASTMember {
     void (*json)(const ASTMember *this, FILE *out, int indent);
+    int (*getType)(const ASTMember *this, Type **typeptr);
     void (*delete)(ASTMember *this);
     struct YYLTYPE loc;
     AST *expr;
@@ -28,6 +29,14 @@ json(const ASTMember *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTMember *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc,
+        "member type checker not implemented",
+        stderr);
+    return 1;
+}
+
 static void
 delete(ASTMember *this) {
     delete_AST(this->expr);
@@ -41,7 +50,7 @@ new_ASTMember(struct YYLTYPE *loc, AST *expr, char *name) {
 
     member = safe_malloc(sizeof(*member));
     *member = (ASTMember){
-        json, delete, *loc, expr, name
+        json, getType, delete, *loc, expr, name
     };
     return (AST *)member;
 }

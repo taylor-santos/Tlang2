@@ -9,6 +9,7 @@ typedef struct ASTTuple ASTTuple;
 
 struct ASTTuple {
     void (*json)(const ASTTuple *this, FILE *out, int indent);
+    int (*getType)(const ASTTuple *this, Type **typeptr);
     void (*delete)(ASTTuple *this);
     struct YYLTYPE loc;
     Vector *exprs; // Vector<AST*>
@@ -25,6 +26,12 @@ json(const ASTTuple *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTTuple *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc, "tuple type checker not implemented", stderr);
+    return 1;
+}
+
 static void
 delete(ASTTuple *this) {
     delete_Vector(this->exprs, (VEC_DELETE_TYPE)delete_AST);
@@ -37,7 +44,7 @@ new_ASTTuple(struct YYLTYPE *loc, Vector *exprs) {
 
     tuple = safe_malloc(sizeof(*tuple));
     *tuple = (ASTTuple){
-        json, delete, *loc, exprs
+        json, getType, delete, *loc, exprs
     };
     return (AST *)tuple;
 }

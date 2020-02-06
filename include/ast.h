@@ -15,10 +15,10 @@ void
 json_AST(const AST *this, FILE *out, int indent);
 
 void
-error_AST(const AST *this, const char *msg, FILE *out);
-
-void
 delete_AST(AST *this);
+
+int
+getType_AST(const AST *this, struct Type **typeptr);
 
 #define ASTProgram(loc, stmts) \
     new_ASTProgram(loc, stmts)
@@ -57,6 +57,13 @@ new_ASTClass(struct YYLTYPE *loc,
     struct Vector *generics,
     struct Vector *inherits,
     struct Vector *members);
+
+#define ASTImpl(loc, name, gen, stmts) new_ASTImpl(loc, name, gen, stmts)
+AST *
+new_ASTImpl(struct YYLTYPE *loc,
+    char *name,
+    struct Vector *generics,
+    struct Vector *stmts);
 
 #define ASTReturn(loc, expr) \
     new_ASTReturn(loc, expr)

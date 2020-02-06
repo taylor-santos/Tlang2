@@ -5,6 +5,7 @@ typedef struct ASTData ASTData;
 
 struct AST {
     void (*json)(const AST *this, FILE *out, int indent);
+    int (*getType)(const AST *this, Type **typeptr);
     void (*delete)(AST *this);
     struct YYLTYPE loc;
 };
@@ -17,4 +18,9 @@ json_AST(const AST *this, FILE *out, int indent) {
 void
 delete_AST(AST *this) {
     ((AST *)this)->delete(this);
+}
+
+int
+getType_AST(const AST *this, struct Type **typeptr) {
+    return this->getType(this, typeptr);
 }

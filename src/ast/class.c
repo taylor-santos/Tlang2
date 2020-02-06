@@ -10,6 +10,7 @@ typedef struct ASTClass ASTClass;
 
 struct ASTClass {
     void (*json)(const ASTClass *this, FILE *out, int indent);
+    int (*getType)(const ASTClass *this, Type **typeptr);
     void (*delete)(ASTClass *this);
     struct YYLTYPE loc;
     Vector *generics; // Vector<char*>
@@ -34,6 +35,12 @@ json(const ASTClass *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTClass *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc, "class type checker not implemented", stderr);
+    return 1;
+}
+
 static void
 delete(ASTClass *this) {
     delete_Vector(this->generics, free);
@@ -51,7 +58,7 @@ new_ASTClass(struct YYLTYPE *loc,
 
     class = safe_malloc(sizeof(*class));
     *class = (ASTClass){
-        json, delete, *loc, generics, inherits, members
+        json, getType, delete, *loc, generics, inherits, members
     };
     return (AST *)class;
 }

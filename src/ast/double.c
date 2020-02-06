@@ -8,6 +8,7 @@ typedef struct ASTDouble ASTDouble;
 
 struct ASTDouble {
     void (*json)(const ASTDouble *this, FILE *out, int indent);
+    int (*getType)(const ASTDouble *this, Type **typeptr);
     void (*delete)(ASTDouble *this);
     struct YYLTYPE loc;
     double val;
@@ -24,6 +25,14 @@ json(const ASTDouble *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+static int
+getType(const ASTDouble *this, UNUSED Type **typeptr) {
+    print_code_error(&this->loc,
+        "double type checker not implemented",
+        stderr);
+    return 1;
+}
+
 static void
 delete(ASTDouble *this) {
     free(this);
@@ -35,7 +44,7 @@ new_ASTDouble(struct YYLTYPE *loc, double val) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTDouble){
-        json, delete, *loc, val
+        json, getType, delete, *loc, val
     };
     return (AST *)node;
 }
