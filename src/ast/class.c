@@ -24,13 +24,13 @@ json(const ASTClass *this, FILE *out, int indent) {
     json_string("class", out, indent);
     json_comma(out, indent);
     json_label("generics", out);
-    json_list(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
     json_comma(out, indent);
     json_label("inherits", out);
-    json_list(this->inherits, (JSON_MAP_TYPE)json_type, out, indent);
+    json_vector(this->inherits, (JSON_MAP_TYPE)json_type, out, indent);
     json_comma(out, indent);
     json_label("members", out);
-    json_list(this->members, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(this->members, (JSON_MAP_TYPE)json_AST, out, indent);
     json_end(out, &indent);
 }
 

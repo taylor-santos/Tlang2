@@ -6,6 +6,7 @@
 typedef struct Type Type;
 struct Type;
 struct Vector;
+struct SparseVector;
 struct AST;
 
 typedef enum Qualifiers {
@@ -38,6 +39,6 @@ new_ExprType(struct AST *expr, struct Vector *generics);
 
 #define TupleType(types) new_TupleType(types)
 Type *
-new_TupleType(struct Vector *types);
+new_TupleType(struct SparseVector *types);
 
 #endif

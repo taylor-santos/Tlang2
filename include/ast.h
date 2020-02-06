@@ -72,15 +72,15 @@ new_ASTFunc(struct YYLTYPE *loc,
     struct Type *ret_type,
     struct Vector *stmts);
 
-#define ASTNamedType(loc, name, type) \
-    new_ASTNamedType(loc, name, type)
+#define ASTNamedType(loc, names, type) \
+    new_ASTNamedType(loc, names, type)
 AST *
-new_ASTNamedType(struct YYLTYPE *loc, char *name, struct Type *type);
+new_ASTNamedType(struct YYLTYPE *loc, struct Vector *names, struct Type *type);
 
-#define ASTTypeStmt(loc, var, type) \
-    new_ASTTypeStmt(loc, var, type)
+#define ASTTypeStmt(loc, expr, type) \
+    new_ASTTypeStmt(loc, expr, type)
 AST *
-new_ASTTypeStmt(struct YYLTYPE *loc, char *var, struct Type *type);
+new_ASTTypeStmt(struct YYLTYPE *loc, AST *expr, struct Type *type);
 
 #define ASTInit(loc, name, gen, args) \
     new_ASTInit(loc, name, gen, args)

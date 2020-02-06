@@ -21,7 +21,7 @@ json(const ASTProgram *this, FILE *out, int indent) {
     json_string("program", out, indent);
     json_comma(out, indent);
     json_label("statements", out);
-    json_list(this->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(this->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
     json_end(out, &indent);
 }
 

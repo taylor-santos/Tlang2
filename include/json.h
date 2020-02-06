@@ -2,10 +2,12 @@
 #define JSON_H
 
 #include <stdio.h>
+#include <inttypes.h>
 
 typedef void (*JSON_MAP_TYPE)(const void *, FILE *, int);
 
 struct Vector;
+struct SparseVector;
 struct dstring;
 
 void
@@ -24,7 +26,7 @@ void
 json_dstring(const struct dstring *value, FILE *out, int indent);
 
 void
-json_int(long long int value, FILE *out, int indent);
+json_int(int64_t value, FILE *out, int indent);
 
 void
 json_double(double value, FILE *out, int indent);
@@ -33,8 +35,14 @@ void
 json_comma(FILE *out, int indent);
 
 void
-json_list(const struct Vector *list,
+json_vector(const struct Vector *list,
     void (*map)(const void *, FILE *, int),
+    FILE *out,
+    int indent);
+
+void
+json_sparse_vector(const struct SparseVector *list,
+    void(*map)(const void *, FILE *, int),
     FILE *out,
     int indent);
 

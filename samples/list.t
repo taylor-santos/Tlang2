@@ -30,4 +30,5 @@ text := "Hello, world!";
 
 foo();
 
-t: (int, int, string);
+t: (int, int..5, string);
+

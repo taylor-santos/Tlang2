@@ -26,6 +26,7 @@
 %code requires{
     #include "ast.h"
     #include "vector.h"
+    #include "sparse_vector.h"
     #include "util.h"
     #include "types.h"
     #include "safe.h"
@@ -65,6 +66,7 @@
 %union {
     AST *ast;
     Vector *vec;
+    SparseVector *svec;
     char *str;
     dstring *dstr;
     long long int int_lit;
@@ -96,21 +98,22 @@
                    T_GE         ">="
                    T_INC        "++"
                    T_DEC        "--"
-                   T_RANGE      ".."
                    T_ERROR      "lexing error"
                    END 0        "end of file"
 %token<str>        T_IDENT      "identifier"
 %token<dstr>       T_STRING     "string literal"
 %token<int_lit>    T_INT        "int literal"
+                   T_RANGE      ".."
 %token<double_lit> T_DOUBLE     "double literal"
 
-%type<ast>  File Statement Definition Expression Class NamedType Return
+%type<ast>  File Statement Definition Expression Class Field Return
             OptExpression Func TypeOptNamed Init PrimaryExpr PostfixExpr
-            UnaryExpr OpExpr TypeStmt
+            UnaryExpr OpExpr TypeStmt NamedArg
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
-            OptNamedTypes NamedTypes OptNamedArgs NamedArgs OptArgsOptNamed
-            ArgsOptNamed Qualifiers Types Tuple
-%type<type> Type TypeDef FuncDef TupleType
+            OptFields Fields OptNamedArgs NamedArgs OptArgsOptNamed
+            ArgsOptNamed Qualifiers Tuple
+%type<svec> Types
+%type<type> Type TypeDef FuncDef
 %type<qualifier> Qualifier
 
 %left T_AND T_OR
@@ -155,7 +158,7 @@ Definition
     }
 
 TypeStmt
-  : T_IDENT ':' Type {
+  : Expression ':' Type {
         $$ = ASTTypeStmt(&@$, $1, $3);
     }
 
@@ -336,7 +339,7 @@ Expression
   | UnaryExpr T_SUB_ASSIGN Expression
 
 Class
-  : T_CLASS OptGenerics OptInherits '{' OptNamedTypes '}' {
+  : T_CLASS OptGenerics OptInherits '{' OptFields '}' {
         $$ = ASTClass(&@$, $2, $3, $5);
     }
 
@@ -356,22 +359,22 @@ Inherits
         $$ = Vector_append($1, $3);
     }
 
-OptNamedTypes
+OptFields
   : %empty {
         $$ = Vector();
     }
-  | NamedTypes
+  | Fields
 
-NamedTypes
-  : NamedType ';' {
+Fields
+  : Field {
         $$ = init_Vector($1);
     }
-  | NamedTypes NamedType ';' {
+  | Fields Field {
         $$ = Vector_append($1, $2);
     }
 
-NamedType
-  : T_IDENT ':' Type {
+Field
+  : IdentList ':' Type ';' {
         $$ = ASTNamedType(&@$, $1, $3);
     }
 
@@ -390,20 +393,29 @@ TypeDef
   | '[' Expression ']' OptGenerics {
         $$ = ExprType($2, $4);
     }
-  | TupleType
-
-TupleType
-  : '(' Types ')' {
+  | '(' Type ')' {
+        $$ = $2;
+    }
+  | '(' Types ')' {
         $$ = TupleType($2);
     }
 
 Types
-  : Type {
-        $$ = init_Vector($1);
+  : Type T_RANGE {
+        $$ = init_SparseVector($1, $2);
+    }
+  | Type ',' Type {
+        $$ = SparseVector_append(init_SparseVector($1, 1), $3, 1);
+    }
+  | Type ',' Type T_RANGE {
+        $$ = SparseVector_append(init_SparseVector($1, 1), $3, $4);
     }
   | Types ',' Type {
-        $$ = Vector_append($1, $3);
-  }
+        $$ = SparseVector_append($1, $3, 1);
+    }
+  | Types ',' Type T_RANGE {
+        $$ = SparseVector_append($1, $3, $4);
+    }
 
 Qualifiers
   : Qualifier {
@@ -443,9 +455,11 @@ ArgsOptNamed
     }
 
 TypeOptNamed
-  : NamedType
+  : T_IDENT ':' Type {
+        $$ = ASTNamedType(&@$, init_Vector($1), $3);
+    }
   | Type {
-        $$ = ASTNamedType(&@$, safe_strdup(""), $1);
+        $$ = ASTNamedType(&@$, Vector(), $1);
     }
 
 OptGenerics
@@ -468,11 +482,16 @@ OptNamedArgs
   | NamedArgs
 
 NamedArgs
-  : NamedType {
+  : NamedArg {
         $$ = init_Vector($1);
     }
-  | NamedArgs ',' NamedType {
+  | NamedArgs ',' NamedArg {
         $$ = Vector_append($1, $3);
+    }
+
+NamedArg
+  : IdentList ':' Type {
+        $$ = ASTNamedType(&@$, $1, $3);
     }
 
 Init

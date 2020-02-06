@@ -28,7 +28,7 @@ json(const ASTInit *this, FILE *out, int indent) {
     json_string(this->name, out, indent);
     json_comma(out, indent);
     json_label("generics", out);
-    json_list(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
     if (NULL != this->args) {
         json_comma(out, indent);
         json_label("args", out);

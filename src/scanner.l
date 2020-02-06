@@ -37,7 +37,7 @@
                 NULL,
                 filename,
                 NULL,
-                "invalid int literal ");
+                "invalid int literal");
             fprintf(stderr, "\"%s\": ", str);
             perror("");
             return T_ERROR;
@@ -46,7 +46,7 @@
                 NULL,
                 filename,
                 NULL,
-                "invalid int literal ");
+                "invalid int literal");
             fprintf(stderr, "\"%s\"\n", str);
             return T_ERROR;
         }
@@ -65,7 +65,7 @@
                 NULL,
                 filename,
                 NULL,
-                "invalid double literal ");
+                "invalid double literal");
             fprintf(stderr, "\"%s\": ", str);
             perror("");
             return T_ERROR;
@@ -74,7 +74,7 @@
                 NULL,
                 filename,
                 NULL,
-                "invalid double literal ");
+                "invalid double literal");
             fprintf(stderr, "\"%s\"\n", str);
             return T_ERROR;
         }
@@ -106,11 +106,8 @@
     }
     .|[\n\r]
     <<EOF>> {
-        yyerror(yylloc,
-            NULL,
-            filename,
-            NULL,
-            "end of file encountered inside comment block\n");
+        yyerror(yylloc, 0, 0, 0,
+            "end of file encountered inside comment block");
         return T_ERROR;
     }
 }
@@ -126,11 +123,7 @@
         return T_STRING;
     }
     [\n\r] {
-        yyerror(yylloc,
-            NULL,
-            filename,
-            NULL,
-            "unterminated string constant\n");
+        yyerror(yylloc, 0, 0, 0, "unterminated string constant");
         return T_ERROR;
     }
     \\n {
@@ -161,47 +154,28 @@
         unsigned int result;
         sscanf(yytext+1, "%o", &result);
         if (result > 0xff) {
-            char msg[40];
-            sprintf(msg, "invalid octal escape sequence: '%s'\n", yytext);
-            yyerror(yylloc,
-                NULL,
-                filename,
-                NULL,
-                msg);
+            yyerror(yylloc, 0, 0, 0, "invalid octal escape sequence");
             return T_ERROR;
         }
         append_char(str, (char)result);
     }
-    [^\\"]+ {
+    [^\\"\n\r]+ {
         append_str(str, yytext);
     }
     \\[\n\r]+ {
         append_str(str, yytext);
     }
     \\. {
-        char msg[40];
-        sprintf(msg, "invalid escape sequence: '%s'\n", yytext);
-        yyerror(yylloc,
-            NULL,
-            filename,
-            NULL,
-            msg);
+        yyerror(yylloc, 0, 0, 0, "invalid escape sequence");
         return T_ERROR;
     }
     \\  {
-        yyerror(yylloc,
-            NULL,
-            filename,
-            NULL,
-            "dangling escape character in string constant\n");
+        yyerror(yylloc, 0, 0, 0, "invalid escape character in string constant");
         return T_ERROR;
     }
     <<EOF>> {
-        yyerror(yylloc,
-            NULL,
-            filename,
-            NULL,
-            "end of file encountered inside string constant\n");
+        yyerror(yylloc, 0, 0, 0,
+            "end of file encountered inside string constant");
         return T_ERROR;
     }
 }
@@ -229,8 +203,17 @@ false  { return T_FALSE; }
 [>][=] { return T_GE; }
 [+][+] { return T_INC; }
 [-][-] { return T_DEC; }
-[.][.] { return T_RANGE; }
-[;{}<>:()[\]]  {
+[.][.][0-9]+ {
+    if (T_ERROR == parse_int(yytext+2, &yylval->int_lit, yylloc, filename)) {
+        return T_ERROR;
+    }
+    if (yylval->int_lit < 2) {
+        yyerror(yylloc, NULL, NULL, NULL, "invalid range value");
+        return T_ERROR;
+    }
+    return T_RANGE;
+}
+[;{}<>:()[\]*/+\-%.,]  {
     return *yytext;
 }
 -?[0-9]+ {
@@ -257,7 +240,7 @@ nan {
 }
 
 . {
-    return yytext[0];
+    return T_ERROR;
 }
 
 %%

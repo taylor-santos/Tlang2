@@ -3,6 +3,7 @@
 #include "json.h"
 #include "util.h"
 #include "vector.h"
+#include "sparse_vector.h"
 #include "dynamic_string.h"
 
 static void
@@ -59,8 +60,8 @@ json_dstring(const dstring *value, FILE *out, UNUSED int indent) {
 }
 
 void
-json_int(long long int value, FILE *out, UNUSED int indent) {
-    fprintf(out, "%lld", value);
+json_int(int64_t value, FILE *out, UNUSED int indent) {
+    fprintf(out, "%" PRId64, value);
 }
 
 void
@@ -92,7 +93,7 @@ json_comma(FILE *out, int indent) {
 }
 
 void
-json_list(const Vector *list,
+json_vector(const Vector *list,
     void (*map)(const void *, FILE *, int),
     FILE *out,
     int indent) {
@@ -108,6 +109,38 @@ json_list(const Vector *list,
             Vector_get(list, i, &element);
             map(element, out, indent + 1);
         }
+        fprintf(out, "\n");
+        print_indent(out, indent);
+    }
+    fprintf(out, "]");
+}
+
+void
+json_sparse_vector(const SparseVector *list,
+    void(*map)(const void *, FILE *, int),
+    FILE *out,
+    int indent) {
+    size_t n = SparseVector_size(list);
+    fprintf(out, "[");
+    if (n > 0) {
+        char *sep = "\n";
+        indent++;
+        for (size_t i = 0; i < n; i++) {
+            fprintf(out, "%s", sep);
+            sep = ",\n";
+            print_indent(out, indent);
+            void *element = NULL;
+            ull count;
+            SparseVector_get(list, i, &element, &count);
+            json_start(out, &indent);
+            json_label("count", out);
+            json_int((long long)count, out, indent);
+            json_comma(out, indent);
+            json_label("value", out);
+            map(element, out, indent);
+            json_end(out, &indent);
+        }
+        indent--;
         fprintf(out, "\n");
         print_indent(out, indent);
     }

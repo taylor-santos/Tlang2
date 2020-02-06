@@ -2,6 +2,7 @@
 #include "types.h"
 #include "safe.h"
 #include "vector.h"
+#include "sparse_vector.h"
 #include "json.h"
 #include "ast.h"
 
@@ -26,7 +27,7 @@ struct ExprType {
 };
 
 struct TupleType {
-    Vector *types; // Vector<Type*>
+    SparseVector *types; // Vector<Type*>
 };
 
 struct Type {
@@ -61,7 +62,7 @@ json_type(const Type *type, FILE *out, int indent) {
     if (NULL != type->qualifiers) {
         json_comma(out, indent);
         json_label("qualifiers", out);
-        json_list(type->qualifiers,
+        json_vector(type->qualifiers,
             (JSON_MAP_TYPE)json_qualifier,
             out,
             indent);
@@ -70,13 +71,13 @@ json_type(const Type *type, FILE *out, int indent) {
         case FUNC:
             json_comma(out, indent);
             json_label("generics", out);
-            json_list(type->func.generics,
+            json_vector(type->func.generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("args", out);
-            json_list(type->func.args, (JSON_MAP_TYPE)json_AST, out, indent);
+            json_vector(type->func.args, (JSON_MAP_TYPE)json_AST, out, indent);
             json_comma(out, indent);
             json_label("return type", out);
             json_type(type->func.ret_type, out, indent);
@@ -87,7 +88,7 @@ json_type(const Type *type, FILE *out, int indent) {
             json_string(type->class.name, out, indent);
             json_comma(out, indent);
             json_label("generics", out);
-            json_list(type->class.generics,
+            json_vector(type->class.generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
@@ -98,7 +99,7 @@ json_type(const Type *type, FILE *out, int indent) {
             json_AST(type->expr.expr, out, indent);
             json_comma(out, indent);
             json_label("generics", out);
-            json_list(type->expr.generics,
+            json_vector(type->expr.generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
@@ -106,7 +107,7 @@ json_type(const Type *type, FILE *out, int indent) {
         case TUPLE:
             json_comma(out, indent);
             json_label("types", out);
-            json_list(type->tuple.types,
+            json_sparse_vector(type->tuple.types,
                 (JSON_MAP_TYPE)json_type,
                 out,
                 indent);
@@ -144,7 +145,8 @@ delete_type(Type *type) {
             delete_Vector(type->expr.generics, free);
             break;
         case TUPLE:
-            delete_Vector(type->tuple.types, (VEC_DELETE_TYPE)delete_type);
+            delete_SparseVector(type->tuple.types,
+                (VEC_DELETE_TYPE)delete_type);
             break;
     }
     if (NULL != type->qualifiers) {
@@ -198,7 +200,7 @@ new_ExprType(AST *expr, Vector *generics) {
 }
 
 Type *
-new_TupleType(Vector *types) {
+new_TupleType(SparseVector *types) {
     Type *t;
 
     t = safe_malloc(sizeof(*t));
