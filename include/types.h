@@ -8,16 +8,24 @@ struct Type;
 struct Vector;
 struct SparseVector;
 struct AST;
+struct Map;
 
 typedef enum Qualifiers {
     Q_CONST = 0x1, Q_FRIEND = 0x2
 } Qualifiers;
+
+typedef struct TypeCheckState {
+    struct Map *symbols; // Map<char*, Type*>
+} TypeCheckState;
 
 void
 json_type(const Type *type, FILE *out, int indent);
 
 void
 json_qualifier(const Qualifiers *value, FILE *out, int indent);
+
+Type *
+copy_type(const Type *type);
 
 void
 delete_type(Type *type);
@@ -40,5 +48,9 @@ new_ExprType(struct AST *expr, struct Vector *generics);
 #define TupleType(types) new_TupleType(types)
 Type *
 new_TupleType(struct SparseVector *types);
+
+#define NamedType(name, type) new_NamedType(name, type)
+Type *
+new_NamedType(char *name, Type *type);
 
 #endif

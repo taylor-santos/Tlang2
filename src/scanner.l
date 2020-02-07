@@ -24,6 +24,7 @@
         const char *msg);
 
     static dstring *str;
+    static YYLTYPE str_begin;
 
     enum yytokentype parse_int(const char *str,
         long long int *val,
@@ -114,11 +115,14 @@
 
 \" {
     str = new_dstring("");
+    str_begin = *yylloc;
     BEGIN(string);
 }
 <string>{
     \" {
         yylval->dstr = str;
+        yylloc->first_line = str_begin.first_line;
+        yylloc->first_column = str_begin.first_column;
         BEGIN(INITIAL);
         return T_STRING;
     }

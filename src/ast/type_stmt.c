@@ -10,7 +10,9 @@ typedef struct ASTTypeStmt ASTTypeStmt;
 
 struct ASTTypeStmt {
     void (*json)(const ASTTypeStmt *this, FILE *out, int indent);
-    int (*getType)(const ASTTypeStmt *this, Type **typeptr);
+    int (*getType)(ASTTypeStmt *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTTypeStmt *this);
     struct YYLTYPE loc;
     AST *expr;
@@ -32,7 +34,9 @@ json(const ASTTypeStmt *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTTypeStmt *this, UNUSED Type **typeptr) {
+getType(ASTTypeStmt *this,
+    UNUSED TypeCheckState *state,
+    UNUSED Type **typeptr) {
     print_code_error(&this->loc,
         "type statement type checker not implemented",
         stderr);

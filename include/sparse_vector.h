@@ -7,6 +7,8 @@
 #define ull unsigned long long int
 
 typedef struct SparseVector SparseVector;
+typedef void (*SVEC_DELETE_FUNC)(void *);
+typedef void *(*SVEC_COPY_FUNC)(const void *);
 
 SparseVector *
 SparseVector_append(SparseVector *this, void *element, ull count);
@@ -35,7 +37,10 @@ new_SparseVector(size_t size);
 SparseVector *
 init_SparseVector(void *element, ull count);
 
+SparseVector *
+copy_SparseVector(SparseVector *vec, SVEC_COPY_FUNC copy_value);
+
 void
-delete_SparseVector(SparseVector *this, void (*delete_value)(void *));
+delete_SparseVector(SparseVector *this, SVEC_DELETE_FUNC delete_value);
 
 #endif

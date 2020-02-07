@@ -8,7 +8,9 @@ typedef struct ASTImpl ASTImpl;
 
 struct ASTImpl {
     void (*json)(const ASTImpl *this, FILE *out, int indent);
-    int (*getType)(const ASTImpl *this, Type **typeptr);
+    int (*getType)(ASTImpl *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTImpl *this);
     struct YYLTYPE loc;
     char *name;
@@ -34,7 +36,7 @@ json(const ASTImpl *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTImpl *this, UNUSED Type **typeptr) {
+getType(ASTImpl *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc, "impl type checker not implemented", stderr);
     return 1;
 }
@@ -43,7 +45,7 @@ static void
 delete(ASTImpl *this) {
     free(this->name);
     delete_Vector(this->generics, free);
-    delete_Vector(this->stmts, (VEC_DELETE_TYPE)delete_AST);
+    delete_Vector(this->stmts, (VEC_DELETE_FUNC)delete_AST);
     free(this);
 }
 

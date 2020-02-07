@@ -8,7 +8,9 @@ typedef struct ASTDefinition ASTDefinition;
 
 struct ASTDefinition {
     void (*json)(const ASTDefinition *this, FILE *out, int indent);
-    int (*getType)(const ASTDefinition *this, Type **typeptr);
+    int (*getType)(ASTDefinition *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTDefinition *this);
     struct YYLTYPE loc;
     AST *vars;
@@ -30,9 +32,15 @@ json(const ASTDefinition *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTDefinition *this, UNUSED Type **typeptr) {
-    print_code_error(&this->loc, "def type checker not implemented", stderr);
-    return 1;
+getType(ASTDefinition *this,
+    UNUSED TypeCheckState *state,
+    UNUSED Type **typeptr) {
+    Type *expr_type = NULL;
+    int status;
+
+    status = getType_AST(this->expr, state, &expr_type);
+    //TODO: compare expr to vars and fill symbol table
+    return status;
 }
 
 static void

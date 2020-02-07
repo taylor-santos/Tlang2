@@ -95,7 +95,11 @@ new_SparseVector(size_t size) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    if (NULL == (this->items = malloc(size * sizeof(void *)))) {
+    if (NULL == (this->items = malloc(size * sizeof(*this->items)))) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    if (NULL == (this->counts = malloc(size * sizeof(*this->counts)))) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
@@ -113,11 +117,11 @@ init_SparseVector(void *element, ull count) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    if (NULL == (this->items = malloc(sizeof(*this->items)))) {
+    if (NULL == (this->items = malloc(1 * sizeof(*this->items)))) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    if (NULL == (this->counts = malloc(sizeof(*this->counts)))) {
+    if (NULL == (this->counts = malloc(1 * sizeof(*this->counts)))) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
@@ -127,6 +131,37 @@ init_SparseVector(void *element, ull count) {
     this->size = 1;
     this->count = count;
     return this;
+}
+
+SparseVector *
+copy_SparseVector(SparseVector *vec, SVEC_COPY_FUNC copy_value) {
+    SparseVector *new_vec;
+    void **new_items;
+    ull *new_counts;
+
+    if (NULL == (new_vec = malloc(sizeof(*new_vec)))) {
+        print_ICE("");
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    if (NULL == (new_items = malloc(vec->capacity * sizeof(*new_items)))) {
+        print_ICE("");
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    if (NULL == (new_counts = malloc(vec->capacity * sizeof(*new_counts)))) {
+        print_ICE("");
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    for (size_t i = 0; i < vec->size; i++) {
+        new_items[i] = copy_value(vec->items[i]);
+        new_counts[i] = vec->counts[i];
+    }
+    *new_vec = (SparseVector){
+        new_items, new_counts, vec->capacity, vec->size, vec->count
+    };
+    return new_vec;
 }
 
 void

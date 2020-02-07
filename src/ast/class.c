@@ -10,12 +10,14 @@ typedef struct ASTClass ASTClass;
 
 struct ASTClass {
     void (*json)(const ASTClass *this, FILE *out, int indent);
-    int (*getType)(const ASTClass *this, Type **typeptr);
+    int (*getType)(ASTClass *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTClass *this);
     struct YYLTYPE loc;
     Vector *generics; // Vector<char*>
     Vector *inherits; // Vector<Type*>
-    Vector *members;  // Vector<AST*> TODO TypeDef
+    Vector *members;  // Vector<AST*>
 };
 
 static void
@@ -36,7 +38,7 @@ json(const ASTClass *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTClass *this, UNUSED Type **typeptr) {
+getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc, "class type checker not implemented", stderr);
     return 1;
 }
@@ -44,8 +46,8 @@ getType(const ASTClass *this, UNUSED Type **typeptr) {
 static void
 delete(ASTClass *this) {
     delete_Vector(this->generics, free);
-    delete_Vector(this->inherits, (VEC_DELETE_TYPE)delete_type);
-    delete_Vector(this->members, (VEC_DELETE_TYPE)delete_AST);
+    delete_Vector(this->inherits, (VEC_DELETE_FUNC)delete_type);
+    delete_Vector(this->members, (VEC_DELETE_FUNC)delete_AST);
     free(this);
 }
 

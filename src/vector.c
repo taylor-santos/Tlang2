@@ -118,6 +118,30 @@ init_Vector(void *element) {
     return this;
 }
 
+Vector *
+copy_Vector(Vector *vec, VEC_COPY_FUNC copy_value) {
+    Vector *new_vec;
+    void **new_items;
+
+    if (NULL == (new_vec = malloc(sizeof(*new_vec)))) {
+        print_ICE("");
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    if (NULL == (new_items = malloc(vec->capacity * sizeof(*new_items)))) {
+        print_ICE("");
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    for (size_t i = 0; i < vec->size; i++) {
+        new_items[i] = copy_value(vec->items[i]);
+    }
+    *new_vec = (Vector){
+        new_items, vec->capacity, vec->size
+    };
+    return new_vec;
+}
+
 void
 delete_Vector(Vector *this, void (*delete_value)(void *)) {
     if (NULL != delete_value) {

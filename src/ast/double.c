@@ -8,7 +8,9 @@ typedef struct ASTDouble ASTDouble;
 
 struct ASTDouble {
     void (*json)(const ASTDouble *this, FILE *out, int indent);
-    int (*getType)(const ASTDouble *this, Type **typeptr);
+    int (*getType)(ASTDouble *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTDouble *this);
     struct YYLTYPE loc;
     double val;
@@ -26,7 +28,7 @@ json(const ASTDouble *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTDouble *this, UNUSED Type **typeptr) {
+getType(ASTDouble *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc,
         "double type checker not implemented",
         stderr);

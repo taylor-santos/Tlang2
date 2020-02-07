@@ -11,7 +11,9 @@ struct Vector;
 
 struct ASTInit {
     void (*json)(const ASTInit *this, FILE *out, int indent);
-    int (*getType)(const ASTInit *this, Type **typeptr);
+    int (*getType)(ASTInit *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTInit *this);
     struct YYLTYPE loc;
     char *name;
@@ -39,7 +41,7 @@ json(const ASTInit *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTInit *this, UNUSED Type **typeptr) {
+getType(ASTInit *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc, "init type checker not implemented", stderr);
     return 1;
 }

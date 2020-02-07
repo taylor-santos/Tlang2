@@ -9,7 +9,9 @@ typedef struct ASTCall ASTCall;
 
 struct ASTCall {
     void (*json)(const ASTCall *this, FILE *out, int indent);
-    int (*getType)(const ASTCall *this, Type **typeptr);
+    int (*getType)(ASTCall *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTCall *this);
     struct YYLTYPE loc;
     AST *expr;
@@ -33,7 +35,7 @@ json(const ASTCall *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTCall *this, UNUSED Type **typeptr) {
+getType(ASTCall *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc,
         "function call type checker not implemented",
         stderr);

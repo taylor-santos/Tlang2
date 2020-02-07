@@ -4,15 +4,19 @@
 #include "vector.h"
 #include "json.h"
 #include "parser.h"
+#include "map.h"
 
 typedef struct ASTProgram ASTProgram;
 
 struct ASTProgram {
     void (*json)(const ASTProgram *this, FILE *out, int indent);
-    int (*getType)(const ASTProgram *this, Type **typeptr);
+    int (*getType)(ASTProgram *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTProgram *this);
     struct YYLTYPE loc;
     Vector *stmts; // Vector<AST*>
+    Map *symbols; // Map<char*, Type*>
 };
 
 static void
@@ -27,26 +31,41 @@ json(const ASTProgram *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTProgram *this, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "program type checker not implemented",
-        stderr);
-    return 1;
+getType(ASTProgram *this,
+    UNUSED TypeCheckState *unused_state,
+    UNUSED Type **typeptr) {
+    size_t n;
+    int status = 0;
+    TypeCheckState state = {
+        this->symbols
+    };
+
+    n = Vector_size(this->stmts);
+    for (size_t i = 0; i < n; i++) {
+        AST *stmt = NULL;
+        Vector_get(this->stmts, i, &stmt);
+        Type *type;
+        status = getType_AST(stmt, &state, &type) || status;
+    }
+    return status;
 }
 
 static void
 delete(ASTProgram *this) {
-    delete_Vector(this->stmts, (VEC_DELETE_TYPE)delete_AST);
+    delete_Vector(this->stmts, (VEC_DELETE_FUNC)delete_AST);
+    delete_Map(this->symbols, NULL);
     free(this);
 }
 
 AST *
 new_ASTProgram(struct YYLTYPE *loc, Vector *stmts) {
     ASTProgram *program = NULL;
+    Map *symbols;
 
     program = safe_malloc(sizeof(*program));
+    symbols = Map();
     *program = (ASTProgram){
-        json, getType, delete, *loc, stmts
+        json, getType, delete, *loc, stmts, symbols
     };
     return (AST *)program;
 }

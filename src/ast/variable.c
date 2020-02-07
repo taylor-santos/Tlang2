@@ -3,12 +3,15 @@
 #include "safe.h"
 #include "json.h"
 #include "parser.h"
+#include "map.h"
 
 typedef struct ASTVariable ASTVariable;
 
 struct ASTVariable {
     void (*json)(const ASTVariable *this, FILE *out, int indent);
-    int (*getType)(const ASTVariable *this, Type **typeptr);
+    int (*getType)(ASTVariable *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTVariable *this);
     struct YYLTYPE loc;
     char *name;
@@ -26,11 +29,9 @@ json(const ASTVariable *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTVariable *this, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "variable type checker not implemented",
-        stderr);
-    return 1;
+getType(ASTVariable *this, TypeCheckState *state, Type **typeptr) {
+    Map *symbols = state->symbols;
+    return 0;
 }
 
 static void

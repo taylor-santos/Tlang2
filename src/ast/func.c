@@ -10,11 +10,13 @@ typedef struct ASTFunc ASTFunc;
 
 struct ASTFunc {
     void (*json)(const ASTFunc *this, FILE *out, int indent);
-    int (*getType)(const ASTFunc *this, Type **typeptr);
+    int (*getType)(ASTFunc *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTFunc *this);
     struct YYLTYPE loc;
     Vector *generics; // Vector<char*>
-    Vector *args;     // Vector<AST*> TODO TypeDef
+    Vector *args;     // Vector<AST*>
     Type *ret_type;   // NULLable
     Vector *stmts;    // Vector<AST*>
 };
@@ -42,7 +44,7 @@ json(const ASTFunc *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTFunc *this, UNUSED Type **typeptr) {
+getType(ASTFunc *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc, "func type checker not implemented", stderr);
     return 1;
 }
@@ -50,11 +52,11 @@ getType(const ASTFunc *this, UNUSED Type **typeptr) {
 static void
 delete(ASTFunc *this) {
     delete_Vector(this->generics, free);
-    delete_Vector(this->args, (VEC_DELETE_TYPE)delete_AST);
+    delete_Vector(this->args, (VEC_DELETE_FUNC)delete_AST);
     if (NULL != this->ret_type) {
         delete_type(this->ret_type);
     }
-    delete_Vector(this->stmts, (VEC_DELETE_TYPE)delete_AST);
+    delete_Vector(this->stmts, (VEC_DELETE_FUNC)delete_AST);
     free(this);
 }
 

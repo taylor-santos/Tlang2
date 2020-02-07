@@ -9,7 +9,9 @@ typedef struct ASTNamedType ASTNamedType;
 
 struct ASTNamedType {
     void (*json)(const ASTNamedType *this, FILE *out, int indent);
-    int (*getType)(const ASTNamedType *this, Type **typeptr);
+    int (*getType)(ASTNamedType *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTNamedType *this);
     struct YYLTYPE loc;
     Vector *names; // Vector<char*> (can be empty for unnamed arguments)
@@ -31,7 +33,9 @@ json(const ASTNamedType *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTNamedType *this, UNUSED Type **typeptr) {
+getType(ASTNamedType *this,
+    UNUSED TypeCheckState *state,
+    UNUSED Type **typeptr) {
     print_code_error(&this->loc,
         "named_type type checker not implemented",
         stderr);
@@ -40,7 +44,7 @@ getType(const ASTNamedType *this, UNUSED Type **typeptr) {
 
 static void
 delete(ASTNamedType *this) {
-    delete_Vector(this->names, (VEC_DELETE_TYPE)free);
+    delete_Vector(this->names, (VEC_DELETE_FUNC)free);
     delete_type(this->type);
     free(this);
 }

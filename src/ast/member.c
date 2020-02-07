@@ -8,7 +8,9 @@ typedef struct ASTMember ASTMember;
 
 struct ASTMember {
     void (*json)(const ASTMember *this, FILE *out, int indent);
-    int (*getType)(const ASTMember *this, Type **typeptr);
+    int (*getType)(ASTMember *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTMember *this);
     struct YYLTYPE loc;
     AST *expr;
@@ -30,7 +32,7 @@ json(const ASTMember *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTMember *this, UNUSED Type **typeptr) {
+getType(ASTMember *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc,
         "member type checker not implemented",
         stderr);

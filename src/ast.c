@@ -5,22 +5,22 @@ typedef struct ASTData ASTData;
 
 struct AST {
     void (*json)(const AST *this, FILE *out, int indent);
-    int (*getType)(const AST *this, Type **typeptr);
+    int (*getType)(AST *this, UNUSED TypeCheckState *state, Type **typeptr);
     void (*delete)(AST *this);
     struct YYLTYPE loc;
 };
 
-void
+inline void
 json_AST(const AST *this, FILE *out, int indent) {
     this->json(this, out, indent);
 }
 
-void
-delete_AST(AST *this) {
-    ((AST *)this)->delete(this);
+inline int
+getType_AST(AST *this, UNUSED TypeCheckState *state, struct Type **typeptr) {
+    return this->getType(this, state, typeptr);
 }
 
-int
-getType_AST(const AST *this, struct Type **typeptr) {
-    return this->getType(this, typeptr);
+inline void
+delete_AST(AST *this) {
+    ((AST *)this)->delete(this);
 }

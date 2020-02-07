@@ -8,7 +8,9 @@ typedef struct ASTReturn ASTReturn;
 
 struct ASTReturn {
     void (*json)(const ASTReturn *this, FILE *out, int indent);
-    int (*getType)(const ASTReturn *this, Type **typeptr);
+    int (*getType)(ASTReturn *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTReturn *this);
     struct YYLTYPE loc;
     AST *expr;
@@ -28,7 +30,7 @@ json(const ASTReturn *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTReturn *this, UNUSED Type **typeptr) {
+getType(ASTReturn *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     print_code_error(&this->loc,
         "return type checker not implemented",
         stderr);

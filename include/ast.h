@@ -10,15 +10,17 @@ struct Vector;
 struct Type;
 struct dstring;
 struct YYLTYPE;
+struct TypeCheckState;
 
 void
 json_AST(const AST *this, FILE *out, int indent);
 
+#define TypeCheck(root) getType_AST(root, NULL, NULL)
+int
+getType_AST(AST *this, struct TypeCheckState *state, struct Type **typeptr);
+
 void
 delete_AST(AST *this);
-
-int
-getType_AST(const AST *this, struct Type **typeptr);
 
 #define ASTProgram(loc, stmts) \
     new_ASTProgram(loc, stmts)

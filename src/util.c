@@ -21,6 +21,22 @@ print_error(const char *fmt, ...) {
 }
 
 int
+print_warning(const char *fmt, ...) {
+    va_list args;
+    int n;
+
+    WHITE(stderr);
+    n = fprintf(stderr, LANG ": ");
+    PURPLE(stderr);
+    n += fprintf(stderr, "warning: ");
+    RESET(stderr);
+    va_start(args, fmt);
+    n += vfprintf(stderr, fmt, args);
+    va_end(args);
+    return n;
+}
+
+int
 print_ICE(const char *fmt, ...) {
     va_list args;
     int n;

@@ -124,13 +124,13 @@
 %token<double_lit> T_DOUBLE     "double literal"
 
 %type<ast>  File Statement Definition Expression Class Field Return
-            OptExpression Func TypeOptNamed Init PrimaryExpr PostfixExpr
-            UnaryExpr OpExpr TypeStmt NamedArg Impl
+            OptExpression Func Init PrimaryExpr PostfixExpr UnaryExpr OpExpr
+            TypeStmt NamedArg Impl
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
             OptFields Fields OptNamedArgs NamedArgs OptArgsOptNamed
             ArgsOptNamed Qualifiers Tuple
 %type<svec> Types
-%type<type> Type TypeDef FuncDef OptRetType
+%type<type> Type TypeDef FuncDef OptRetType TypeOptNamed
 %type<qualifier> Qualifier
 
 %left T_AND T_OR
@@ -487,11 +487,9 @@ ArgsOptNamed
 
 TypeOptNamed
   : T_IDENT ':' Type {
-        $$ = ASTNamedType(&@$, init_Vector($1), $3);
+        $$ = NamedType($1, $3);
     }
-  | Type {
-        $$ = ASTNamedType(&@$, Vector(), $1);
-    }
+  | Type
 
 OptGenerics
   : %empty {

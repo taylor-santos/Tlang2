@@ -10,7 +10,8 @@ enum VEC_ERROR_MODE {
 };
 
 typedef struct Vector Vector;
-typedef void (*VEC_DELETE_TYPE)(void *);
+typedef void (*VEC_DELETE_FUNC)(void *);
+typedef void *(*VEC_COPY_FUNC)(const void *);
 
 /*
  * Append element to the end of the vector, expanding its capacity if needed.
@@ -49,8 +50,11 @@ new_Vector(size_t size);
 Vector *
 init_Vector(void *element);
 
+Vector *
+copy_Vector(Vector *vec, VEC_COPY_FUNC copy_value);
+
 void
-delete_Vector(Vector *this, void (*delete_value)(void *));
+delete_Vector(Vector *this, VEC_DELETE_FUNC delete_value);
 
 void
 Vector_set_error_mode(enum VEC_ERROR_MODE mode);

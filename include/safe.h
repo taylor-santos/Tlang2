@@ -45,4 +45,7 @@ void *SAFE_PTR;
         NULL)                                                               \
     : SAFE_PTR)
 
+char *
+safe_strdup_func(const char *str);
+
 #endif

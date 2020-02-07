@@ -9,10 +9,13 @@ typedef struct ASTString ASTString;
 
 struct ASTString {
     void (*json)(const ASTString *this, FILE *out, int indent);
-    int (*getType)(const ASTString *this, Type **typeptr);
+    int (*getType)(ASTString *this,
+        UNUSED TypeCheckState *state,
+        Type **typeptr);
     void (*delete)(ASTString *this);
     struct YYLTYPE loc;
     dstring *str;
+    Type *type;
 };
 
 static void
@@ -27,26 +30,27 @@ json(const ASTString *this, FILE *out, int indent) {
 }
 
 static int
-getType(const ASTString *this, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "string type checker not implemented",
-        stderr);
-    return 1;
+getType(ASTString *this, UNUSED TypeCheckState *state, Type **typeptr) {
+    *typeptr = this->type;
+    return 0;
 }
 
 static void
 delete(ASTString *this) {
     delete_dstring(this->str);
+    delete_type(this->type);
     free(this);
 }
 
 AST *
 new_ASTString(struct YYLTYPE *loc, dstring *str) {
     ASTString *node = NULL;
+    Type *type;
 
+    type = ClassType(safe_strdup("string"), Vector());
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
-        json, getType, delete, *loc, str
+        json, getType, delete, *loc, str, type
     };
     return (AST *)node;
 }
