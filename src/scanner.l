@@ -218,8 +218,11 @@ false  { return T_FALSE; }
     }
     return T_RANGE;
 }
-[;{}<>:()[\]*/+\-%.,=]  {
-    return *yytext;
+[[][0-9]+[\]] {
+    if (T_ERROR == parse_int(yytext+2, &yylval->int_lit, yylloc, filename)) {
+        return T_ERROR;
+    }
+    return T_INDEX;
 }
 -?[0-9]+ {
     return parse_int(yytext, &yylval->int_lit, yylloc, filename);
@@ -239,9 +242,16 @@ false  { return T_FALSE; }
 nan {
     return parse_double(yytext, &yylval->double_lit, yylloc, filename);
 }
-[a-zA-Z_][a-zA-Z0-9_]* {
+[a-zA-Z][a-zA-Z0-9_]* {
     yylval->str = safe_strdup(yytext);
     return T_IDENT;
+}
+[_]+[a-zA-Z0-9]+[a-zA-Z0-9_]* {
+    yylval->str = safe_strdup(yytext);
+    return T_IDENT;
+}
+[;{}<>:()[\]*/+\-%.,=\_]  {
+    return *yytext;
 }
 
 . {

@@ -20,6 +20,11 @@ getType_AST(AST *this, UNUSED TypeCheckState *state, struct Type **typeptr) {
     return this->getType(this, state, typeptr);
 }
 
+inline YYLTYPE
+getLoc_AST(AST *this) {
+    return this->loc;
+}
+
 inline void
 delete_AST(AST *this) {
     ((AST *)this)->delete(this);

@@ -1,11 +1,14 @@
 #ifndef MAP_H
 #define MAP_H
 #include <stddef.h>
+#include <stdio.h>
+#include "json.h"
 
 #define Map() new_Map(16, 0.75)
 
 typedef struct Map Map;
 typedef void (*MAP_DELETE_FUNC)(void *);
+typedef void *(*MAP_COPY_FUNC)(void *);
 
 /*
  * Insert a value into the map at a given key. If data already exists with that
@@ -16,7 +19,7 @@ typedef void (*MAP_DELETE_FUNC)(void *);
  * key, a memory leak is possible if no other pointers to the data exist.
  */
 int
-Map_put(Map *map, const void *key, size_t key_len, void *value, void **prev);
+Map_put(Map *map, const void *key, size_t key_len, void *value, void *prev);
 
 /*
  * Retrieve a value from the map using a given key. If the key exists in the
@@ -25,11 +28,17 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void **prev);
  * the map, 1 is returned.
  */
 int
-Map_get(Map *map, const void *key, size_t key_len, void **value);
+Map_get(Map *map, const void *key, size_t key_len, void *value);
 #define Map_contains(map, key, len) Map_get(map, key, len, NULL)
 
 void
 delete_Map(Map *map, MAP_DELETE_FUNC delete_value);
+
+void
+json_Map(const Map *map, JSON_MAP_TYPE json_value, FILE *out, int indent);
+
+Map *
+copy_Map(const Map *map, MAP_COPY_FUNC copy_value);
 
 Map *
 new_Map(unsigned int capacity, double load_factor);

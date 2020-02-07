@@ -44,9 +44,12 @@ impl Foo {
         y := "Foo";
     };
 };
-*/
-a := 1;         // a is an int
-b, c := 2;      // b and c are ints
-d, e := (3, 4); // d and e are ints
-f := (5, 6, 7); // f is a tuple of 3 ints
 
+a, b, t := *(1, 2, (4, 5, 6));
+*/
+a, b: int;
+b := 5;
+Foo := class {
+    x: int;
+};
+a := b;

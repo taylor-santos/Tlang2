@@ -36,9 +36,9 @@ json(const ASTCall *this, FILE *out, int indent) {
 
 static int
 getType(ASTCall *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "function call type checker not implemented",
-        stderr);
+    print_code_error(stderr,
+        this->loc,
+        "function call type checker not implemented");
     return 1;
 }
 

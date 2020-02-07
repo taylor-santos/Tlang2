@@ -45,7 +45,7 @@ json(const ASTFunc *this, FILE *out, int indent) {
 
 static int
 getType(ASTFunc *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc, "func type checker not implemented", stderr);
+    print_code_error(stderr, this->loc, "func type checker not implemented");
     return 1;
 }
 

@@ -33,9 +33,7 @@ json(const ASTMember *this, FILE *out, int indent) {
 
 static int
 getType(ASTMember *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "member type checker not implemented",
-        stderr);
+    print_code_error(stderr, this->loc, "member type checker not implemented");
     return 1;
 }
 

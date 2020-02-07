@@ -34,7 +34,7 @@ json(const ASTIndex *this, FILE *out, int indent) {
 
 static int
 getType(ASTIndex *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc, "index type checker not implemented", stderr);
+    print_code_error(stderr, this->loc, "index type checker not implemented");
     return 1;
 }
 

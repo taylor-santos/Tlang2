@@ -54,7 +54,7 @@ getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
         AST *expr = NULL;
         Type *type, *type_copy;
 
-        Vector_get(this->exprs, 0, &expr);
+        Vector_get(this->exprs, i, &expr);
         if (getType_AST(expr, state, &type)) {
             status = 1;
         } else {

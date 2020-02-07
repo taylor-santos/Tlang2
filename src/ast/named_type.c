@@ -36,9 +36,9 @@ static int
 getType(ASTNamedType *this,
     UNUSED TypeCheckState *state,
     UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "named_type type checker not implemented",
-        stderr);
+    print_code_error(stderr,
+        this->loc,
+        "named_type type checker not implemented");
     return 1;
 }
 

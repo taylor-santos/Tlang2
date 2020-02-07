@@ -33,7 +33,7 @@ json(const ASTBool *this, FILE *out, int indent) {
 
 static int
 getType(ASTBool *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc, "bool type checker not implemented", stderr);
+    print_code_error(stderr, this->loc, "bool type checker not implemented");
     return 1;
 }
 

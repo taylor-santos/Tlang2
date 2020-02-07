@@ -31,9 +31,7 @@ json(const ASTReturn *this, FILE *out, int indent) {
 
 static int
 getType(ASTReturn *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "return type checker not implemented",
-        stderr);
+    print_code_error(stderr, this->loc, "return type checker not implemented");
     return 1;
 }
 

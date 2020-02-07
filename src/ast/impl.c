@@ -37,7 +37,7 @@ json(const ASTImpl *this, FILE *out, int indent) {
 
 static int
 getType(ASTImpl *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc, "impl type checker not implemented", stderr);
+    print_code_error(stderr, this->loc, "impl type checker not implemented");
     return 1;
 }
 

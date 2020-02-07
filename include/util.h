@@ -32,6 +32,6 @@ print_warning(const char *fmt, ...);
 int
 print_ICE(const char *fmt, ...);
 void
-print_code_error(const struct YYLTYPE *loc, const char *msg, FILE *out);
+print_code_error(FILE *out, struct YYLTYPE loc, const char *msg, ...);
 
 #endif

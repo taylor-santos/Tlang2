@@ -107,7 +107,7 @@ resize(Map *map, unsigned int new_capacity) {
 }
 
 int
-Map_put(Map *map, const void *key, size_t key_len, void *value, void **prev) {
+Map_put(Map *map, const void *key, size_t key_len, void *value, void *prev) {
     unsigned long h;
     struct Entry **curr_entry, *new_entry;
 
@@ -118,7 +118,7 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void **prev) {
         int cmp = keycmp(key, key_len, (*curr_entry)->key, (*curr_entry)->len);
         if (0 == cmp) {
             if (NULL != prev) {
-                *prev = (*curr_entry)->value;
+                *(void **)prev = (*curr_entry)->value;
             }
             (*curr_entry)->value = value;
             return 0;
@@ -147,7 +147,7 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void **prev) {
 }
 
 int
-Map_get(Map *map, const void *key, size_t key_len, void **value) {
+Map_get(Map *map, const void *key, size_t key_len, void *value) {
     struct Entry *curr_entry;
     unsigned long h;
 
@@ -158,7 +158,7 @@ Map_get(Map *map, const void *key, size_t key_len, void **value) {
         int cmp = keycmp(key, key_len, curr_entry->key, curr_entry->len);
         if (0 == cmp) {
             if (NULL != value) {
-                *value = curr_entry->value;
+                *(void **)value = curr_entry->value;
             }
             return 0;
         } else if (0 > cmp) {
@@ -184,6 +184,61 @@ delete_Map(Map *this, MAP_DELETE_FUNC delete_value) {
     }
     free(this->entries);
     free(this);
+}
+
+void
+json_Map(const Map *map, JSON_MAP_TYPE json_value, FILE *out, int indent) {
+    json_start(out, &indent);
+    int first = 1;
+    for (size_t i = 0; i < map->capacity; i++) {
+        for (struct Entry *curr = map->entries[i];
+            curr != NULL;
+            curr = curr->next) {
+            if (!first) {
+                json_comma(out, indent);
+            }
+            first = 0;
+            char str[curr->len + 1];
+            sprintf(str, "%*s", (int)curr->len, (char *)curr->key);
+            json_label(str, out);
+            json_value(curr->value, out, indent);
+        }
+    }
+    json_end(out, &indent);
+}
+
+Map *
+copy_Map(const Map *map, MAP_COPY_FUNC copy_value) {
+    Map *new_map;
+    struct Entry **entries;
+
+    if (NULL == (new_map = malloc(sizeof(*new_map)))) {
+        print_ICE("");
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    if (NULL == (entries = calloc(map->capacity, sizeof(*entries)))) {
+        print_ICE("");
+        perror("");
+        exit(EXIT_FAILURE);
+    }
+    for (size_t i = 0; i < map->capacity; i++) {
+        struct Entry **new_entry = &entries[i];
+        for (struct Entry *curr = map->entries[i];
+            curr != NULL;
+            curr = curr->next) {
+            void *new_value = curr->value;
+            if (copy_value != NULL) {
+                new_value = copy_value(curr->value);
+            }
+            *new_entry = Entry(curr->key, curr->len, new_value, curr->hash);
+            new_entry = &(*new_entry)->next;
+        }
+    }
+    *new_map = (Map){
+        map->size, map->capacity, map->load_factor, entries
+    };
+    return new_map;
 }
 
 Map *

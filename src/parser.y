@@ -82,6 +82,7 @@
 %union {
     AST *ast;
     Vector *vec;
+    struct Field *field;
     SparseVector *svec;
     char *str;
     dstring *dstr;
@@ -121,16 +122,17 @@
 %token<dstr>       T_STRING     "string literal"
 %token<int_lit>    T_INT        "int literal"
                    T_RANGE      ".."
+                   T_INDEX      "index operator"
 %token<double_lit> T_DOUBLE     "double literal"
 
-%type<ast>  File Statement Definition Expression Class Field Return
-            OptExpression Func Init PrimaryExpr PostfixExpr UnaryExpr OpExpr
-            TypeStmt NamedArg Impl
+%type<ast>  File Statement Definition Expression Class Return OptExpression Func
+            Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt NamedArg Impl
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
-            OptFields Fields OptNamedArgs NamedArgs OptArgsOptNamed
-            ArgsOptNamed Qualifiers Tuple
+            OptNamedArgs NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple
+            DefVars OptFields Fields
 %type<svec> Types
 %type<type> Type TypeDef FuncDef OptRetType TypeOptNamed
+%type<field> Field
 %type<qualifier> Qualifier
 
 %left T_AND T_OR
@@ -171,12 +173,26 @@ Statement
   | Return ';'
 
 Definition
-  : IdentList T_DEF Expression {
+  : DefVars T_DEF Expression {
         $$ = ASTDefinition(&@$, $1, $3);
     }
 
+DefVars
+  : T_IDENT {
+        $$ = init_Vector($1);
+    }
+  | '_' {
+        $$ = init_Vector(NULL);
+    }
+  | DefVars ',' T_IDENT {
+        $$ = Vector_append($1, $3);
+    }
+  | DefVars ',' '_' {
+        $$ = Vector_append($1, NULL);
+    }
+
 TypeStmt
-  : Expression ':' Type {
+  : DefVars ':' Type {
         $$ = ASTTypeStmt(&@$, $1, $3);
     }
 
@@ -216,6 +232,9 @@ PrimaryExpr
   | '(' Expression ')' {
         $$ = $2;
     }
+  | '(' Tuple ')' {
+        $$ = ASTTuple(&@$, $2);
+    }
 
 PostfixExpr
   : PrimaryExpr
@@ -224,6 +243,9 @@ PostfixExpr
     }
   | PostfixExpr '(' OptExpression ')' {
         $$ = ASTCall(&@$, $1, $3);
+    }
+  | PostfixExpr T_INDEX {
+        $$ = ASTConstIndex(&@$, $1, $2);
     }
   | PostfixExpr '[' Expression ']' {
         $$ = ASTIndex(&@$, $1, $3);
@@ -254,6 +276,9 @@ UnaryExpr
         char *name = safe_strdup("!");
         AST *func = ASTVariable(&@$, name);
         $$ = ASTCall(&@$, func, ASTTuple(&@$, args));
+    }
+  | '*' PostfixExpr {
+        $$ = ASTSpread(&@$, $2);
     }
 
 OpExpr
@@ -347,9 +372,6 @@ Tuple
 
 Expression
   : OpExpr
-  | '(' Tuple ')' {
-        $$ = ASTTuple(&@$, $2);
-    }
   | UnaryExpr '=' Expression
   | UnaryExpr T_MUL_ASSIGN Expression
   | UnaryExpr T_DIV_ASSIGN Expression
@@ -360,6 +382,27 @@ Expression
 Class
   : T_CLASS OptGenerics OptInherits '{' OptFields '}' {
         $$ = ASTClass(&@$, $2, $3, $5);
+    }
+
+OptFields
+  : %empty {
+        $$ = Vector();
+    }
+  | Fields
+
+Fields
+  : Field {
+        $$ = init_Vector($1);
+    }
+  | Fields Field {
+        $$ = Vector_append($1, $2);
+    }
+
+Field
+  : IdentList ':' Type ';' {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = $1;
+        $$->type = $3;
     }
 
 Impl
@@ -383,35 +426,16 @@ Inherits
         $$ = Vector_append($1, $3);
     }
 
-OptFields
-  : %empty {
-        $$ = Vector();
-    }
-  | Fields
-
-Fields
-  : Field {
-        $$ = init_Vector($1);
-    }
-  | Fields Field {
-        $$ = Vector_append($1, $2);
-    }
-
-Field
-  : IdentList ':' Type ';' {
-        $$ = ASTNamedType(&@$, $1, $3);
-    }
-
 Type
   : TypeDef
   | Qualifiers TypeDef {
         $$ = $2;
-        Type_setQualifiers($$, $1);
+        setTypeQualifiers($$, $1);
     }
 
 TypeDef
   : T_IDENT OptGenerics {
-        $$ = ClassType($1, $2);
+        $$ = ObjectType($1, $2);
     }
   | FuncDef
   | '[' Expression ']' OptGenerics {
@@ -546,5 +570,5 @@ void yyerror(YYLTYPE *locp,
     UNUSED yyscan_t scanner,
     const char *msg
 ) {
-    print_code_error(locp, msg, stderr);
+    print_code_error(stderr, *locp, msg);
 }

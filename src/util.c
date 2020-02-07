@@ -53,7 +53,8 @@ print_ICE(const char *fmt, ...) {
 }
 
 void
-print_code_error(const YYLTYPE *loc, const char *msg, FILE *out) {
+print_code_error(FILE *out, struct YYLTYPE loc, const char *msg, ...) {
+    va_list args;
     FILE *in;
     char *line = NULL;
     size_t len = 0;
@@ -62,33 +63,36 @@ print_code_error(const YYLTYPE *loc, const char *msg, FILE *out) {
 
     fprintf(out,
         "%s:%d:%d-%d:%d: ",
-        loc->filename,
-        loc->first_line,
-        loc->first_column,
-        loc->last_line,
-        loc->last_column);
+        loc.filename,
+        loc.first_line,
+        loc.first_column,
+        loc.last_line,
+        loc.last_column);
     RED(out);
     fprintf(out, "error: ");
     RESET(out);
-    fprintf(out, "%s:\n", msg);
-    maxw = snprintf(NULL, 0, "%d", loc->last_line) + 1;
-    if (NULL == (in = fopen(loc->filename, "r"))) {
-        perror(loc->filename);
+    va_start(args, msg);
+    vfprintf(out, msg, args);
+    va_end(args);
+    fprintf(out, ":\n");
+    maxw = snprintf(NULL, 0, "%d", loc.last_line) + 1;
+    if (NULL == (in = fopen(loc.filename, "r"))) {
+        perror(loc.filename);
         return;
     }
     while (-1 != (read = getline(&line, &len, in)) &&
-        lineno <= loc->last_line) {
-        if (lineno >= loc->first_line) {
+        lineno <= loc.last_line) {
+        if (lineno >= loc.first_line) {
             w = snprintf(NULL, 0, "%d", lineno);
-            int min_col = lineno == loc->first_line
-                ? loc->first_column - 1
+            int min_col = lineno == loc.first_line
+                ? loc.first_column - 1
                 : 0;
-            int max_col = lineno == loc->last_line
-                ? loc->last_column - 1
+            int max_col = lineno == loc.last_line
+                ? loc.last_column - 1
                 : (int)read - 2;
 
             fprintf(out, "%*d | ", maxw - w, lineno);
-            if (min_col > 1) {
+            if (min_col > 0) {
                 fprintf(out, "%.*s", min_col, line);
             }
             RED(out);

@@ -32,11 +32,11 @@ json(const ASTProgram *this, FILE *out, int indent) {
 
 static int
 getType(ASTProgram *this,
-    UNUSED TypeCheckState *unused_state,
+    UNUSED TypeCheckState *state,
     UNUSED Type **typeptr) {
     size_t n;
     int status = 0;
-    TypeCheckState state = {
+    TypeCheckState new_state = {
         this->symbols
     };
 
@@ -45,15 +45,18 @@ getType(ASTProgram *this,
         AST *stmt = NULL;
         Vector_get(this->stmts, i, &stmt);
         Type *type;
-        status = getType_AST(stmt, &state, &type) || status;
+        status = getType_AST(stmt, &new_state, &type) || status;
     }
+    fprintf(stdout, "Symbol Table:\n");
+    json_Map(this->symbols, (JSON_MAP_TYPE)json_type, stdout, 0);
+    fprintf(stdout, "\n");
     return status;
 }
 
 static void
 delete(ASTProgram *this) {
     delete_Vector(this->stmts, (VEC_DELETE_FUNC)delete_AST);
-    delete_Map(this->symbols, NULL);
+    delete_Map(this->symbols, (MAP_DELETE_FUNC)delete_type);
     free(this);
 }
 

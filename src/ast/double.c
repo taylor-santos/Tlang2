@@ -29,9 +29,7 @@ json(const ASTDouble *this, FILE *out, int indent) {
 
 static int
 getType(ASTDouble *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc,
-        "double type checker not implemented",
-        stderr);
+    print_code_error(stderr, this->loc, "double type checker not implemented");
     return 1;
 }
 

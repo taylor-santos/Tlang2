@@ -3,6 +3,7 @@
 #include "safe.h"
 #include "json.h"
 #include "parser.h"
+#include "map.h"
 
 typedef struct ASTDefinition ASTDefinition;
 
@@ -13,9 +14,18 @@ struct ASTDefinition {
         Type **typeptr);
     void (*delete)(ASTDefinition *this);
     struct YYLTYPE loc;
-    Vector *vars;  // Vector<char*>
+    Vector *vars;  // Vector<char* | NULL>: NULL indicates ignored variables
     AST *expr;
 };
+
+static void
+json_underscore(const char *str, FILE *out, int indent) {
+    if (str == NULL) {
+        json_string("_", out, indent);
+    } else {
+        json_string(str, out, indent);
+    }
+}
 
 static void
 json(const ASTDefinition *this, FILE *out, int indent) {
@@ -24,7 +34,7 @@ json(const ASTDefinition *this, FILE *out, int indent) {
     json_string("definition", out, indent);
     json_comma(out, indent);
     json_label("variables", out);
-    json_vector(this->vars, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(this->vars, (JSON_MAP_TYPE)json_underscore, out, indent);
     json_comma(out, indent);
     json_label("expr", out);
     json_AST(this->expr, out, indent);
@@ -32,14 +42,90 @@ json(const ASTDefinition *this, FILE *out, int indent) {
 }
 
 static int
-getType(ASTDefinition *this,
-    UNUSED TypeCheckState *state,
-    UNUSED Type **typeptr) {
+getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
     Type *expr_type = NULL;
-    int status;
+    int status = 0;
+    size_t nvars;
 
-    status = getType_AST(this->expr, state, &expr_type);
-    //TODO: compare expr to vars and fill symbol table
+    if (getType_AST(this->expr, state, &expr_type)) {
+        return 1;
+    }
+    nvars = Vector_size(this->vars);
+    if (typeOf(expr_type) == TYPE_SPREAD) {
+        const struct SpreadType *spread = getTypeData(expr_type);
+        size_t nspread = SparseVector_count(spread->types);
+        if (nvars != nspread) {
+            print_code_error(stderr,
+                getLoc_AST(this->expr),
+                "assignment to %d variable%s from %d tuple value%s",
+                nvars,
+                nvars > 1
+                    ? "s"
+                    : "",
+                nspread,
+                nspread > 1
+                    ? "s"
+                    : "");
+            return 1;
+        }
+        size_t sparse_size = SparseVector_size(spread->types);
+        size_t var_index = 0;
+        for (size_t i = 0; i < sparse_size; i++) {
+            unsigned long long count;
+            Type *type = NULL;
+            SparseVector_get(spread->types, i, &type, &count);
+            for (unsigned long long j = 0; j < count; j++) {
+                char *name = NULL;
+                Vector_get(this->vars, var_index, &name);
+                size_t len = strlen(name);
+                Type *prev_type = NULL;
+                if (!Map_get(state->symbols, name, len, &prev_type)) {
+                    if (TypeCompare(type, prev_type, state)) {
+                        print_code_error(stderr,
+                            this->loc,
+                            "redefinition of variable \"%s\"",
+                            name);
+                        status = 1;
+                    } else {
+                        setInit(prev_type, 1);
+                    }
+                } else {
+                    Type *type_copy = copy_type(type);
+                    setInit(type_copy, 1);
+                    Map_put(state->symbols, name, len, type_copy, NULL);
+                }
+                var_index++;
+            }
+        }
+
+        return status;
+    }
+    // Right-hand expression is not a spread tuple
+    for (size_t i = 0; i < nvars; i++) {
+        char *name = NULL;
+        Vector_get(this->vars, i, &name);
+        if (name != NULL) {
+            //Not an ignored variable (_)
+            size_t len = strlen(name);
+            Type *prev_type = NULL;
+            if (!Map_get(state->symbols, name, len, &prev_type)) {
+                if (TypeCompare(expr_type, prev_type, state)) {
+                    print_code_error(stderr,
+                        this->loc,
+                        "redefinition of variable \"%s\"",
+                        name);
+                    status = 1;
+                } else {
+                    setInit(prev_type, 1);
+                }
+            } else {
+                Type *type_copy = copy_type(expr_type);
+                setInit(type_copy, 1);
+                Map_put(state->symbols, name, len, type_copy, NULL);
+            }
+        }
+    }
+    *typeptr = expr_type;
     return status;
 }
 

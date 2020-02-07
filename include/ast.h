@@ -12,12 +12,20 @@ struct dstring;
 struct YYLTYPE;
 struct TypeCheckState;
 
+struct Field {
+    struct Vector *names;
+    struct Type *type;
+};
+
 void
 json_AST(const AST *this, FILE *out, int indent);
 
 #define TypeCheck(root) getType_AST(root, NULL, NULL)
 int
 getType_AST(AST *this, struct TypeCheckState *state, struct Type **typeptr);
+
+struct YYLTYPE
+getLoc_AST(AST *this);
 
 void
 delete_AST(AST *this);
@@ -52,13 +60,18 @@ new_ASTCall(struct YYLTYPE *loc, AST *expr, AST *args);
 AST *
 new_ASTIndex(struct YYLTYPE *loc, AST *expr, AST *index);
 
-#define ASTClass(loc, gen, inherit, members) \
-    new_ASTClass(loc, gen, inherit, members)
+#define ASTConstIndex(loc, expr, index) \
+    new_ASTConstIndex(loc, expr, index)
+AST *
+new_ASTConstIndex(struct YYLTYPE *loc, AST *expr, long long int index);
+
+#define ASTClass(loc, gen, inherit, fields) \
+    new_ASTClass(loc, gen, inherit, fields)
 AST *
 new_ASTClass(struct YYLTYPE *loc,
     struct Vector *generics,
     struct Vector *inherits,
-    struct Vector *members);
+    struct Vector *fields);
 
 #define ASTImpl(loc, name, gen, stmts) new_ASTImpl(loc, name, gen, stmts)
 AST *
@@ -86,10 +99,10 @@ new_ASTFunc(struct YYLTYPE *loc,
 AST *
 new_ASTNamedType(struct YYLTYPE *loc, struct Vector *names, struct Type *type);
 
-#define ASTTypeStmt(loc, expr, type) \
-    new_ASTTypeStmt(loc, expr, type)
+#define ASTTypeStmt(loc, vars, type) \
+    new_ASTTypeStmt(loc, vars, type)
 AST *
-new_ASTTypeStmt(struct YYLTYPE *loc, AST *expr, struct Type *type);
+new_ASTTypeStmt(struct YYLTYPE *loc, struct Vector *vars, struct Type *type);
 
 #define ASTInit(loc, name, gen, args) \
     new_ASTInit(loc, name, gen, args)
@@ -103,6 +116,11 @@ new_ASTInit(struct YYLTYPE *loc,
     new_ASTTuple(loc, exprs)
 AST *
 new_ASTTuple(struct YYLTYPE *loc, struct Vector *exprs);
+
+#define ASTSpread(loc, expr) \
+    new_ASTSpread(loc, expr)
+AST *
+new_ASTSpread(struct YYLTYPE *loc, AST *expr);
 
 #define ASTInt(loc, val) \
     new_ASTInt(loc, val)

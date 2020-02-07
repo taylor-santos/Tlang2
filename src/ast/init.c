@@ -42,7 +42,7 @@ json(const ASTInit *this, FILE *out, int indent) {
 
 static int
 getType(ASTInit *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(&this->loc, "init type checker not implemented", stderr);
+    print_code_error(stderr, this->loc, "init type checker not implemented");
     return 1;
 }
 
