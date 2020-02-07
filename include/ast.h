@@ -30,7 +30,7 @@ new_ASTProgram(struct YYLTYPE *loc, struct Vector *stmts);
 #define ASTDefinition(loc, vars, expr) \
     new_ASTDefinition(loc, vars, expr)
 AST *
-new_ASTDefinition(struct YYLTYPE *loc, AST *vars, AST *expr);
+new_ASTDefinition(struct YYLTYPE *loc, struct Vector *vars, AST *expr);
 
 #define ASTVariable(loc, name) \
     new_ASTVariable(loc, name)

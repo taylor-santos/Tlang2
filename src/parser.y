@@ -171,7 +171,7 @@ Statement
   | Return ';'
 
 Definition
-  : Expression T_DEF Expression {
+  : IdentList T_DEF Expression {
         $$ = ASTDefinition(&@$, $1, $3);
     }
 
@@ -338,16 +338,17 @@ OpExpr
     }
 
 Tuple
-  : OpExpr {
-        $$ = init_Vector($1);
+  : OpExpr ',' OpExpr {
+        $$ = Vector_append(init_Vector($1), $3);
     }
   | Tuple ',' OpExpr {
         $$ = Vector_append($1, $3);
     }
 
 Expression
-  : Tuple {
-        $$ = ASTTuple(&@$, $1);
+  : OpExpr
+  | '(' Tuple ')' {
+        $$ = ASTTuple(&@$, $2);
     }
   | UnaryExpr '=' Expression
   | UnaryExpr T_MUL_ASSIGN Expression

@@ -1,3 +1,4 @@
+/*
 Functor := class<T> {
     map : func<S>(fn: func(T) => S) => [this]<S>;
 };
@@ -24,7 +25,7 @@ Pair := class<T, S> {
     second: S;
 };
 
-a, b, c := 1, 2, 3;
+a, b, c := (1, 2, 3);
 
 text := "Hello, world!";
 
@@ -43,6 +44,9 @@ impl Foo {
         y := "Foo";
     };
 };
-
-a := 5;
+*/
+a := 1;         // a is an int
+b, c := 2;      // b and c are ints
+d, e := (3, 4); // d and e are ints
+f := (5, 6, 7); // f is a tuple of 3 ints
 

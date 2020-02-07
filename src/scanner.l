@@ -218,7 +218,7 @@ false  { return T_FALSE; }
     }
     return T_RANGE;
 }
-[;{}<>:()[\]*/+\-%.,]  {
+[;{}<>:()[\]*/+\-%.,=]  {
     return *yytext;
 }
 -?[0-9]+ {

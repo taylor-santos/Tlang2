@@ -13,7 +13,7 @@ struct ASTDefinition {
         Type **typeptr);
     void (*delete)(ASTDefinition *this);
     struct YYLTYPE loc;
-    AST *vars;
+    Vector *vars;  // Vector<char*>
     AST *expr;
 };
 
@@ -24,7 +24,7 @@ json(const ASTDefinition *this, FILE *out, int indent) {
     json_string("definition", out, indent);
     json_comma(out, indent);
     json_label("variables", out);
-    json_AST(this->vars, out, indent);
+    json_vector(this->vars, (JSON_MAP_TYPE)json_string, out, indent);
     json_comma(out, indent);
     json_label("expr", out);
     json_AST(this->expr, out, indent);
@@ -45,13 +45,13 @@ getType(ASTDefinition *this,
 
 static void
 delete(ASTDefinition *this) {
-    delete_AST(this->vars);
+    delete_Vector(this->vars, free);
     delete_AST(this->expr);
     free(this);
 }
 
 AST *
-new_ASTDefinition(struct YYLTYPE *loc, AST *vars, AST *expr) {
+new_ASTDefinition(struct YYLTYPE *loc, Vector *vars, AST *expr) {
     ASTDefinition *definition = NULL;
 
     definition = safe_malloc(sizeof(*definition));
