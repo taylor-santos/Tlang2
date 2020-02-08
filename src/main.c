@@ -26,7 +26,7 @@ main(int argc, char *argv[]) {
     YY_BUFFER_STATE state;
     FILE *output;
 
-    #ifdef _WIN32_IE
+    #ifdef _WIN32
     handle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(handle, &console);
     saved_attributes = console.wAttributes;

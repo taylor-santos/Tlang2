@@ -1,12 +1,10 @@
 #include "vector.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #include "util.h"
+#include "safe.h"
 
 #define REALLOC_SIZE 8
-
-static enum VEC_ERROR_MODE ERROR_MODE = VEC_EXIT_ON_FAIL;
 
 struct Vector {
     void **items;
@@ -18,41 +16,20 @@ Vector *
 Vector_append(Vector *this, void *element) {
     if (this->size == this->capacity) {
         size_t new_capacity = this->capacity + REALLOC_SIZE;
-        if (NULL == (this->items =
-            realloc(this->items, new_capacity * sizeof(void *)))) {
-            if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-                perror("realloc");
-                exit(EXIT_FAILURE);
-            } else {
-                return NULL;
-            }
-        }
+        this->items = safe_realloc(this->items, new_capacity * sizeof(void *));
         this->capacity = new_capacity;
     }
     this->items[this->size++] = element;
     return this;
 }
 
-int
-Vector_get(const Vector *this, size_t index, void *element_ptr) {
-    if (element_ptr == NULL) {
-        if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-            print_ICE("NULL pointer passed to Vector get().\n");
-            exit(EXIT_FAILURE);
-        } else {
-            return 1;
-        }
-    }
+void *
+Vector_get(const Vector *this, size_t index) {
     if (index >= this->size) {
-        if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-            print_ICE("Invalid index passed to Vector get().\n");
-            exit(EXIT_FAILURE);
-        } else {
-            return 1;
-        }
+        print_ICE("Invalid index passed to Vector get().\n");
+        exit(EXIT_FAILURE);
     }
-    *((const void **)element_ptr) = this->items[index];
-    return 0;
+    return this->items[index];
 }
 
 size_t
@@ -69,25 +46,10 @@ Vector *
 new_Vector(size_t size) {
     Vector *this;
 
-    if (NULL == (this = malloc(sizeof(*this)))) {
-        if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
-        } else {
-            return NULL;
-        }
-    }
-    if (NULL == (this->items = malloc(size * sizeof(void *)))) {
-        if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
-        } else {
-            free(this);
-            return NULL;
-        }
-    }
-    this->capacity = size;
-    this->size = 0;
+    this = safe_malloc(sizeof(*this));
+    *this = (Vector){
+        safe_malloc(size * sizeof(void *)), size, 0
+    };
     return this;
 }
 
@@ -95,31 +57,21 @@ Vector *
 init_Vector(void *element) {
     Vector *this;
 
-    if (NULL == (this = malloc(sizeof(*this)))) {
-        if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
-        } else {
-            return NULL;
-        }
-    }
-    if (NULL == (this->items = malloc(sizeof(*this->items)))) {
-        if (VEC_EXIT_ON_FAIL == ERROR_MODE) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
-        } else {
-            free(this);
-            return NULL;
-        }
-    }
+    this = safe_malloc(sizeof(*this));
+    this->items = malloc(sizeof(*this->items));
     this->items[0] = element;
     this->capacity = 1;
     this->size = 1;
     return this;
 }
 
+void
+sort_Vector(Vector *vec, VEC_COMPARATOR comparator) {
+    qsort(vec->items, vec->size, sizeof(*vec->items), comparator);
+}
+
 Vector *
-copy_Vector(Vector *vec, VEC_COPY_FUNC copy_value) {
+copy_Vector(const Vector *vec, VEC_COPY_FUNC copy_value) {
     Vector *new_vec;
     void **new_items;
 
@@ -151,10 +103,4 @@ delete_Vector(Vector *this, void (*delete_value)(void *)) {
     }
     free(this->items);
     free(this);
-}
-
-void
-Vector_set_error_mode(enum VEC_ERROR_MODE mode) {
-    assert(VEC_EXIT_ON_FAIL == mode || VEC_RETURN_ERROR_CODE == mode);
-    ERROR_MODE = mode;
 }

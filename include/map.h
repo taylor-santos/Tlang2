@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "json.h"
+#include "iterator.h"
 
 #define Map() new_Map(16, 0.75)
 
@@ -42,5 +43,8 @@ copy_Map(const Map *map, MAP_COPY_FUNC copy_value);
 
 Map *
 new_Map(unsigned int capacity, double load_factor);
+
+Iterator *
+Map_iterator(Map *map);
 
 #endif

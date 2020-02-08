@@ -47,7 +47,7 @@ new_ASTString(struct YYLTYPE *loc, dstring *str) {
     ASTString *node = NULL;
     Type *type;
 
-    type = ObjectType(safe_strdup("string"), Vector());
+    type = ObjectType(loc, safe_strdup("string"), Vector());
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
         json, getType, delete, *loc, str, type

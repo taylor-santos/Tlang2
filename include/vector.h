@@ -5,13 +5,10 @@
 
 #define Vector() new_Vector(0)
 
-enum VEC_ERROR_MODE {
-    VEC_EXIT_ON_FAIL, VEC_RETURN_ERROR_CODE
-};
-
 typedef struct Vector Vector;
 typedef void (*VEC_DELETE_FUNC)(void *);
 typedef void *(*VEC_COPY_FUNC)(const void *);
+typedef int (*VEC_COMPARATOR)(const void *, const void *);
 
 /*
  * Append element to the end of the vector, expanding its capacity if needed.
@@ -23,12 +20,11 @@ Vector *
 Vector_append(Vector *this, void *element);
 
 /*
- * If index is within the bounds of the vector, points element_ptr to the
- * element at that index. If VEC_EXIT_ON_FAIL is defined, an index error or
- * NULL element_ptr will print an error message
+ * If index is within the bounds of the vector, returns the element at that
+ * index. Otherwise prints an error and exits the program.
  */
-int
-Vector_get(const Vector *this, size_t index, void *element_ptr);
+void *
+Vector_get(const Vector *this, size_t index);
 
 /*
  * Returns the number of elements in the vector.
@@ -50,13 +46,13 @@ new_Vector(size_t size);
 Vector *
 init_Vector(void *element);
 
+void
+sort_Vector(Vector *vec, VEC_COMPARATOR comparator);
+
 Vector *
-copy_Vector(Vector *vec, VEC_COPY_FUNC copy_value);
+copy_Vector(const Vector *vec, VEC_COPY_FUNC copy_value);
 
 void
 delete_Vector(Vector *this, VEC_DELETE_FUNC delete_value);
-
-void
-Vector_set_error_mode(enum VEC_ERROR_MODE mode);
 
 #endif

@@ -32,6 +32,11 @@ json_label(const char *label, FILE *out) {
 }
 
 void
+json_nlabel(const char *label, int len, FILE *out) {
+    fprintf(out, "\"%.*s\": ", len, label);
+}
+
+void
 json_string(const char *value, FILE *out, UNUSED int indent) {
     fprintf(out, "\"%s\"", (char *)value);
 }
@@ -105,8 +110,7 @@ json_vector(const Vector *list,
             fprintf(out, "%s", sep);
             sep = ",\n";
             print_indent(out, indent + 1);
-            void *element = NULL;
-            Vector_get(list, i, &element);
+            void *element = Vector_get(list, i);
             map(element, out, indent + 1);
         }
         fprintf(out, "\n");

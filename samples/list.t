@@ -46,10 +46,17 @@ impl Foo {
 };
 
 a, b, t := *(1, 2, (4, 5, 6));
+
 */
-a, b: int;
-b := 5;
-Foo := class {
-    x: int;
+Bar := class {
+    x : int;
+    new(int);
 };
-a := b;
+
+b := new Bar(5);
+
+fn := func(x: int, y: int) {
+
+};
+
+fn(5, fn(1,2));

@@ -39,9 +39,7 @@ getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
     if (1 == n) {
         //Tuple has single value, flatten it:
         Type *type;
-        AST *expr = NULL;
-
-        Vector_get(this->exprs, 0, &expr);
+        AST *expr = Vector_get(this->exprs, 0);
         if (getType_AST(expr, state, &type)) {
             return 1;
         }
@@ -51,10 +49,9 @@ getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
     //Tuple has multiple values:
     types = new_SparseVector(n);
     for (size_t i = 0; i < n; i++) {
-        AST *expr = NULL;
         Type *type, *type_copy;
 
-        Vector_get(this->exprs, i, &expr);
+        AST *expr = Vector_get(this->exprs, i);
         if (getType_AST(expr, state, &type)) {
             status = 1;
         } else {
@@ -63,7 +60,7 @@ getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
         }
     }
     if (0 == status) {
-        *typeptr = this->type = TupleType(types);
+        *typeptr = this->type = TupleType(&this->loc, types);
     }
     return status;
 }

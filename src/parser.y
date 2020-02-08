@@ -83,6 +83,7 @@
     AST *ast;
     Vector *vec;
     struct Field *field;
+    struct ClassBody *class;
     SparseVector *svec;
     char *str;
     dstring *dstr;
@@ -126,12 +127,13 @@
 %token<double_lit> T_DOUBLE     "double literal"
 
 %type<ast>  File Statement Definition Expression Class Return OptExpression Func
-            Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt NamedArg Impl
+            Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
             OptNamedArgs NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple
-            DefVars OptFields Fields
+            DefVars Constructor OptArguments Arguments
 %type<svec> Types
 %type<type> Type TypeDef FuncDef OptRetType TypeOptNamed
+%type<class> Fields OptFields
 %type<field> Field
 %type<qualifier> Qualifier
 
@@ -241,7 +243,7 @@ PostfixExpr
   | PostfixExpr '.' T_IDENT {
         $$ = ASTMember(&@$, $1, $3);
     }
-  | PostfixExpr '(' OptExpression ')' {
+  | PostfixExpr '(' OptArguments ')' {
         $$ = ASTCall(&@$, $1, $3);
     }
   | PostfixExpr T_INDEX {
@@ -257,25 +259,25 @@ UnaryExpr
         Vector *args = init_Vector($2);
         char *name = safe_strdup("++");
         AST *func = ASTVariable(&@$, name);
-        $$ = ASTCall(&@$, func, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, func, args);
     }
   | T_DEC PostfixExpr {
         Vector *args = init_Vector($2);
         char *name = safe_strdup("--");
         AST *func = ASTVariable(&@$, name);
-        $$ = ASTCall(&@$, func, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, func, args);
      }
   | '-' PostfixExpr {
         Vector *args = init_Vector($2);
         char *name = safe_strdup("-");
         AST *func = ASTVariable(&@$, name);
-        $$ = ASTCall(&@$, func, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, func, args);
     }
   | '!' PostfixExpr {
         Vector *args = init_Vector($2);
         char *name = safe_strdup("!");
         AST *func = ASTVariable(&@$, name);
-        $$ = ASTCall(&@$, func, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, func, args);
     }
   | '*' PostfixExpr {
         $$ = ASTSpread(&@$, $2);
@@ -287,79 +289,79 @@ OpExpr
         Vector *args = init_Vector($3);
         char *name = safe_strdup("*");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr '/' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("/");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr '%' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("%");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr '+' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("+");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr '-' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("-");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr '<' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("<");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr '>' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup(">");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr T_LE OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("<=");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr T_GE OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup(">=");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr T_EQ OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("==");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr T_NE OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("!=");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr T_AND OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("&&");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
   | OpExpr T_OR OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("||");
         AST *method = ASTMember(&@$, $1, name);
-        $$ = ASTCall(&@$, method, ASTTuple(&@$, args));
+        $$ = ASTCall(&@$, method, args);
     }
 
 Tuple
@@ -386,23 +388,42 @@ Class
 
 OptFields
   : %empty {
-        $$ = Vector();
+        $$ = safe_malloc(sizeof(*$$));
+        $$->fields = Vector();
+        $$->constructors = Vector();
     }
   | Fields
 
 Fields
-  : Field {
-        $$ = init_Vector($1);
+  : Field ';' {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->fields = init_Vector($1);
+        $$->constructors = Vector();
     }
-  | Fields Field {
-        $$ = Vector_append($1, $2);
+  | Constructor ';' {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->fields = Vector();
+        $$->constructors = init_Vector($1);
+    }
+  | Fields Field ';' {
+        $$ = $1;
+        $$->fields = Vector_append($$->fields, $2);
+    }
+  | Fields Constructor ';' {
+        $$ = $1;
+        $$->constructors = Vector_append($$->constructors, $2);
     }
 
 Field
-  : IdentList ':' Type ';' {
+  : IdentList ':' Type {
         $$ = safe_malloc(sizeof(*$$));
         $$->names = $1;
         $$->type = $3;
+    }
+
+Constructor
+  : T_NEW '(' OptArgsOptNamed ')' {
+        $$ = $3;
     }
 
 Impl
@@ -435,17 +456,17 @@ Type
 
 TypeDef
   : T_IDENT OptGenerics {
-        $$ = ObjectType($1, $2);
+        $$ = ObjectType(&@$, $1, $2);
     }
   | FuncDef
   | '[' Expression ']' OptGenerics {
-        $$ = ExprType($2, $4);
+        $$ = ExprType(&@$, $2, $4);
     }
   | '(' Type ')' {
         $$ = $2;
     }
   | '(' Types ')' {
-        $$ = TupleType($2);
+        $$ = TupleType(&@$, $2);
     }
 
 Types
@@ -485,7 +506,7 @@ Qualifier
 
 FuncDef
   : T_FUNC OptGenerics '(' OptArgsOptNamed ')' OptRetType {
-        $$ = FuncType($2, $4, $6);
+        $$ = FuncType(&@$, $2, $4, $6);
     }
 
 OptRetType
@@ -512,7 +533,7 @@ ArgsOptNamed
 
 TypeOptNamed
   : T_IDENT ':' Type {
-        $$ = NamedType($1, $3);
+        $$ = NamedType(&@$, $1, $3);
     }
   | Type
 
@@ -536,23 +557,31 @@ OptNamedArgs
   | NamedArgs
 
 NamedArgs
-  : NamedArg {
+  : Field {
         $$ = init_Vector($1);
     }
-  | NamedArgs ',' NamedArg {
+  | NamedArgs ',' Field {
         $$ = Vector_append($1, $3);
     }
 
-NamedArg
-  : IdentList ':' Type {
-        $$ = ASTNamedType(&@$, $1, $3);
-    }
-
 Init
-  : T_NEW T_IDENT OptGenerics '(' OptExpression ')' {
+  : T_NEW T_IDENT OptGenerics '(' OptArguments ')' {
         $$ = ASTInit(&@$, $2, $3, $5);
     }
 
+OptArguments
+  : %empty {
+        $$ = Vector();
+    }
+  | Arguments
+
+Arguments
+  : Expression {
+        $$ = init_Vector($1);
+    }
+  | Arguments ',' Expression {
+        $$ = Vector_append($1, $3);
+    }
 
 IdentList
   : T_IDENT {

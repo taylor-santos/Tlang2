@@ -50,6 +50,10 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
     if (getType_AST(this->expr, state, &expr_type)) {
         return 1;
     }
+    if (expr_type == NULL) {
+        print_code_error(stderr, this->loc, "assigning to variable from none");
+        return 1;
+    }
     nvars = Vector_size(this->vars);
     if (typeOf(expr_type) == TYPE_SPREAD) {
         const struct SpreadType *spread = getTypeData(expr_type);
@@ -59,13 +63,13 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
                 getLoc_AST(this->expr),
                 "assignment to %d variable%s from %d tuple value%s",
                 nvars,
-                nvars > 1
-                    ? "s"
-                    : "",
+                nvars == 1
+                    ? ""
+                    : "s",
                 nspread,
-                nspread > 1
-                    ? "s"
-                    : "");
+                nspread == 1
+                    ? ""
+                    : "s");
             return 1;
         }
         size_t sparse_size = SparseVector_size(spread->types);
@@ -75,16 +79,22 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
             Type *type = NULL;
             SparseVector_get(spread->types, i, &type, &count);
             for (unsigned long long j = 0; j < count; j++) {
-                char *name = NULL;
-                Vector_get(this->vars, var_index, &name);
+                char *name = Vector_get(this->vars, var_index);
                 size_t len = strlen(name);
                 Type *prev_type = NULL;
                 if (!Map_get(state->symbols, name, len, &prev_type)) {
                     if (TypeCompare(type, prev_type, state)) {
+                        char *oldTypeName = typeToString(prev_type);
+                        char *newTypeName = typeToString(type);
                         print_code_error(stderr,
                             this->loc,
-                            "redefinition of variable \"%s\"",
-                            name);
+                            "redefinition of variable \"%s\" from type "
+                            "\"%s\" to type \"%s\"",
+                            name,
+                            oldTypeName,
+                            newTypeName);
+                        free(oldTypeName);
+                        free(newTypeName);
                         status = 1;
                     } else {
                         setInit(prev_type, 1);
@@ -102,18 +112,24 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
     }
     // Right-hand expression is not a spread tuple
     for (size_t i = 0; i < nvars; i++) {
-        char *name = NULL;
-        Vector_get(this->vars, i, &name);
+        char *name = Vector_get(this->vars, i);
         if (name != NULL) {
             //Not an ignored variable (_)
             size_t len = strlen(name);
             Type *prev_type = NULL;
             if (!Map_get(state->symbols, name, len, &prev_type)) {
                 if (TypeCompare(expr_type, prev_type, state)) {
+                    char *oldTypeName = typeToString(prev_type);
+                    char *newTypeName = typeToString(expr_type);
                     print_code_error(stderr,
                         this->loc,
-                        "redefinition of variable \"%s\"",
-                        name);
+                        "redefinition of variable \"%s\" from type "
+                        "\"%s\" to type \"%s\"",
+                        name,
+                        oldTypeName,
+                        newTypeName);
+                    free(oldTypeName);
+                    free(newTypeName);
                     status = 1;
                 } else {
                     setInit(prev_type, 1);

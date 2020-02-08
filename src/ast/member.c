@@ -3,6 +3,7 @@
 #include "safe.h"
 #include "json.h"
 #include "parser.h"
+#include "map.h"
 
 typedef struct ASTMember ASTMember;
 
@@ -15,6 +16,7 @@ struct ASTMember {
     struct YYLTYPE loc;
     AST *expr;
     char *name;
+    Type *type; // NULL until type checker is executed.
 };
 
 static void
@@ -33,14 +35,51 @@ json(const ASTMember *this, FILE *out, int indent) {
 
 static int
 getType(ASTMember *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(stderr, this->loc, "member type checker not implemented");
-    return 1;
+    Type *exprType = NULL;
+    if (getType_AST(this->expr, state, &exprType)) {
+        return 1;
+    }
+    char *msg;
+    if (TypeVerify(exprType, state, &msg)) {
+        print_code_error(stderr, this->loc, msg);
+        free(msg);
+        return 1;
+    }
+    if (TYPE_OBJECT != typeOf(exprType)) {
+        char *typeName = typeToString(exprType);
+        print_code_error(stderr,
+            this->loc,
+            "member access operator used on non-object type \"%s\"",
+            typeName);
+        free(typeName);
+        return 1;
+    }
+    const struct ObjectType *object = getTypeData(exprType);
+    Type *classType = NULL;
+    Map_get(state->symbols, object->name, strlen(object->name), &classType);
+    const struct ClassType *class = getTypeData(classType);
+    Type *fieldType;
+    if (Map_get(class->fields, this->name, strlen(this->name), &fieldType)) {
+        char *typeName = typeToString(exprType);
+        print_code_error(stderr,
+            this->loc,
+            "object with type \"%s\" doesn't have a member \"%s\"",
+            typeName,
+            this->name);
+        free(typeName);
+        return 1;
+    }
+    *typeptr = this->type = copy_type(fieldType);
+    return 0;
 }
 
 static void
 delete(ASTMember *this) {
     delete_AST(this->expr);
     free(this->name);
+    if (NULL != this->type) {
+        delete_type(this->type);
+    }
     free(this);
 }
 
@@ -50,7 +89,7 @@ new_ASTMember(struct YYLTYPE *loc, AST *expr, char *name) {
 
     member = safe_malloc(sizeof(*member));
     *member = (ASTMember){
-        json, getType, delete, *loc, expr, name
+        json, getType, delete, *loc, expr, name, NULL
     };
     return (AST *)member;
 }

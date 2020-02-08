@@ -9,6 +9,7 @@ struct Vector;
 struct SparseVector;
 struct AST;
 struct Map;
+struct YYLTYPE;
 
 typedef enum Types {
     TYPE_FUNC,
@@ -31,9 +32,10 @@ struct FuncType {
 };
 
 struct ClassType {
-    struct Vector *generics; // Vector<char*>
-    struct Vector *supers;   // Vector<char*>
-    struct Map *fields;      // Map<char*, Type*>
+    struct Vector *generics;     // Vector<char*>
+    struct Vector *supers;       // Vector<char*>
+    struct Vector *constructors; // Vector<Vector<Type*>>
+    struct Map *fields;          // Map<char*, Type*>
 };
 
 struct ObjectType {
@@ -62,6 +64,11 @@ struct NamedType {
 
 typedef struct TypeCheckState {
     struct Map *symbols; // Map<char*, Type*>
+    // Map class names to their implementations. Each time a class name is
+    // seen it gets added to the map with NULL as the AST. Each time an impl
+    // is seen, add its AST to the map. At the end of type checking, check
+    // that all classes have implementations.
+    struct Map *classes; // Map<char*, AST*>
 } TypeCheckState;
 
 void
@@ -82,8 +89,14 @@ setTypeQualifiers(Type *type, struct Vector *qualifiers);
 int
 TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
 
+int
+TypeVerify(const Type *type, const TypeCheckState *state, char **msg);
+
 Types
 typeOf(const Type *type);
+
+struct YYLTYPE
+typeLoc(const Type *type);
 
 unsigned char
 isInit(const Type *type);
@@ -97,33 +110,47 @@ getTypeData(Type *type);
 char *
 typeToString(const Type *type);
 
-#define FuncType(gen, args, ret) new_FuncType(gen, args, ret)
+#define FuncType(loc, gen, args, ret) \
+    new_FuncType(loc, gen, args, ret)
 Type *
-new_FuncType(struct Vector *generics, struct Vector *args, Type *ret_type);
+new_FuncType(const struct YYLTYPE *loc,
+    struct Vector *generics,
+    struct Vector *args,
+    Type *ret_type);
 
-#define ClassType(gen, supers, fields) new_ClassType(gen, supers, fields)
+#define ClassType(loc, gen, sup, cons, fields) \
+    new_ClassType(loc, gen, sup, cons, fields)
 Type *
-new_ClassType(struct Vector *generics,
+new_ClassType(const struct YYLTYPE *loc,
+    struct Vector *generics,
     struct Vector *supers,
+    struct Vector *cons,
     struct Map *fields);
 
-#define ObjectType(name, gen) new_ObjectType(name, gen)
+#define ObjectType(loc, name, gen) \
+    new_ObjectType(loc, name, gen)
 Type *
-new_ObjectType(char *name, struct Vector *generics);
+new_ObjectType(const struct YYLTYPE *loc, char *name, struct Vector *generics);
 
-#define ExprType(expr, gen) new_ExprType(expr, gen)
+#define ExprType(loc, expr, gen) \
+    new_ExprType(loc, expr, gen)
 Type *
-new_ExprType(struct AST *expr, struct Vector *generics);
+new_ExprType(const struct YYLTYPE *loc,
+    struct AST *expr,
+    struct Vector *generics);
 
-#define TupleType(types) new_TupleType(types)
+#define TupleType(loc, types) \
+    new_TupleType(loc, types)
 Type *
-new_TupleType(struct SparseVector *types);
+new_TupleType(const struct YYLTYPE *loc, struct SparseVector *types);
 
-#define NamedType(name, type) new_NamedType(name, type)
+#define NamedType(loc, name, type) \
+    new_NamedType(loc, name, type)
 Type *
-new_NamedType(char *name, Type *type);
+new_NamedType(const struct YYLTYPE *loc, char *name, Type *type);
 
-#define SpreadType(tuple) new_SpreadType(tuple)
+#define SpreadType(tuple) \
+    new_SpreadType(tuple)
 Type *
 new_SpreadType(Type *tuple);
 

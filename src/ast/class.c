@@ -18,19 +18,14 @@ struct ASTClass {
     struct YYLTYPE loc;
     Vector *generics; // Vector<char*>
     Vector *supers;   // Vector<Type*>
+    Vector *cons;     // Vector<Vector<Type*>>
     Vector *fields;   // Vector<Field*>
     Type *type;       // NULL until type checker is executed.
 };
 
 static void
-json_field(struct Field *field, FILE *out, int indent) {
-    json_start(out, &indent);
-    json_label("names", out);
-    json_vector(field->names, (JSON_MAP_TYPE)json_string, out, indent);
-    json_comma(out, indent);
-    json_label("type", out);
-    json_type(field->type, out, indent);
-    json_end(out, &indent);
+json_constructor(Vector *cons, FILE *out, int indent) {
+    json_vector(cons, (JSON_MAP_TYPE)json_type, out, indent);
 }
 
 static void
@@ -45,19 +40,39 @@ json(const ASTClass *this, FILE *out, int indent) {
     json_label("supers", out);
     json_vector(this->supers, (JSON_MAP_TYPE)json_type, out, indent);
     json_comma(out, indent);
+    json_label("constructors", out);
+    json_vector(this->cons, (JSON_MAP_TYPE)json_constructor, out, indent);
+    json_comma(out, indent);
     json_label("fields", out);
     json_vector(this->fields, (JSON_MAP_TYPE)json_field, out, indent);
     json_end(out, &indent);
 }
 
+static void *
+copy_cons(const Vector *cons) {
+    return copy_Vector(cons, (VEC_COPY_FUNC)copy_type);
+}
+
+static void
+delete_cons(Vector *cons) {
+    delete_Vector(cons, (VEC_DELETE_FUNC)delete_type);
+}
+
+static int
+cons_compare(const Vector **cons1, const Vector **cons2) {
+    return (int)Vector_size(*cons1) - (int)Vector_size(*cons2);
+}
+
 static int
 getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    size_t ngen, nsupers, nfields;
-    Map *fields = Map();
+    size_t ngen, nsupers, ncons, nfields;
+    Vector *constructors;
+    Map *fields;
     int status = 0;
 
     ngen = Vector_size(this->generics);
     nsupers = Vector_size(this->supers);
+    ncons = Vector_size(this->cons);
     nfields = Vector_size(this->fields);
     if (ngen > 0) {
         print_warning("class generics not implemented\n");
@@ -65,13 +80,21 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     if (nsupers > 0) {
         print_warning("class inheritance not yet implemented\n");
     }
+    constructors = copy_Vector(this->cons, (VEC_COPY_FUNC)copy_cons);
+    sort_Vector(constructors, (VEC_COMPARATOR)cons_compare);
+    fields = Map();
     for (size_t i = 0; i < nfields; i++) {
-        struct Field *field = NULL;
-        Vector_get(this->fields, i, &field);
+        struct Field *field = Vector_get(this->fields, i);
+        char *msg;
+        if (TypeVerify(field->type, state, &msg)) {
+            print_code_error(stderr, typeLoc(field->type), msg);
+            free(msg);
+            status = 1;
+            continue;
+        }
         size_t nnames = Vector_size(field->names);
         for (size_t j = 0; j < nnames; j++) {
-            char *name = NULL;
-            Vector_get(field->names, j, &name);
+            char *name = Vector_get(field->names, j);
             size_t len = strlen(name);
             if (!Map_get(fields, name, len, NULL)) {
                 print_code_error(stderr,
@@ -86,17 +109,13 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
         }
     }
     if (status) {
+        delete_Vector(constructors, (VEC_DELETE_FUNC)delete_cons);
+        delete_Map(fields, (MAP_DELETE_FUNC)delete_type);
         return 1;
     }
-    *typeptr = this->type = ClassType(Vector(), Vector(), fields);
+    *typeptr = this->type =
+        ClassType(&this->loc, Vector(), Vector(), constructors, fields);
     return 0;
-}
-
-static void
-delete_field(struct Field *field) {
-    delete_Vector(field->names, free);
-    delete_type(field->type);
-    free(field);
 }
 
 static void
@@ -104,6 +123,7 @@ delete(ASTClass *this) {
     delete_Vector(this->generics, free);
     delete_Vector(this->supers, (VEC_DELETE_FUNC)delete_type);
     delete_Vector(this->fields, (VEC_DELETE_FUNC)delete_field);
+    delete_Vector(this->cons, (VEC_DELETE_FUNC)delete_cons);
     if (NULL != this->type) {
         delete_type(this->type);
     }
@@ -114,12 +134,21 @@ AST *
 new_ASTClass(struct YYLTYPE *loc,
     Vector *generics,
     Vector *inherits,
-    Vector *members) {
+    struct ClassBody *body) {
     ASTClass *class = NULL;
 
     class = safe_malloc(sizeof(*class));
     *class = (ASTClass){
-        json, getType, delete, *loc, generics, inherits, members, NULL
+        json,
+        getType,
+        delete,
+        *loc,
+        generics,
+        inherits,
+        body->constructors,
+        body->fields,
+        NULL
     };
+    free(body);
     return (AST *)class;
 }

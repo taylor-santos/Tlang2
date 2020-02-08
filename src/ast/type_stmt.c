@@ -38,11 +38,16 @@ static int
 getType(ASTTypeStmt *this, TypeCheckState *state, UNUSED Type **typeptr) {
     int status = 0;
     size_t nvars;
+    char *msg;
 
+    if (TypeVerify(this->type, state, &msg)) {
+        print_code_error(stderr, typeLoc(this->type), msg);
+        free(msg);
+        return 1;
+    }
     nvars = Vector_size(this->vars);
     for (size_t i = 0; i < nvars; i++) {
-        char *var = NULL;
-        Vector_get(this->vars, i, &var);
+        char *var = Vector_get(this->vars, i);
         size_t len = strlen(var);
         Type *prev_type = NULL;
         if (!Map_get(state->symbols, var, len, &prev_type)) {

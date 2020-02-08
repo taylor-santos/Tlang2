@@ -43,7 +43,7 @@ new_ASTInt(struct YYLTYPE *loc, long long int val) {
     ASTInt *node = NULL;
     Type *type;
 
-    type = new_ObjectType(safe_strdup("int"), Vector());
+    type = new_ObjectType(loc, safe_strdup("int"), Vector());
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
         json, getType, delete, *loc, val, type

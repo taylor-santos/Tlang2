@@ -1,5 +1,6 @@
 #include "map.h"
 #include "util.h"
+#include "safe.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,22 +20,20 @@ struct Map {
     struct Entry **entries;
 };
 
+struct IteratorData {
+    Map *map;
+    struct Entry *currEntry;
+    size_t index;
+    void *next;
+};
+
 static struct Entry *
 new_Entry(const void *key, size_t len, void *value, unsigned int h) {
     struct Entry *new_entry;
     void *new_key;
 
-    if (NULL == (new_entry = malloc(sizeof(*new_entry)))) {
-        print_ICE("");
-        perror("malloc");
-        return NULL;
-    }
-    if (NULL == (new_key = malloc(len))) {
-        free(new_entry);
-        print_ICE("");
-        perror("malloc");
-        return NULL;
-    }
+    new_entry = safe_malloc(sizeof(*new_entry));
+    new_key = safe_malloc(len);
     memcpy(new_key, key, len);
     *new_entry = (struct Entry){
         NULL, new_key, len, value, h
@@ -74,11 +73,7 @@ static int
 resize(Map *map, unsigned int new_capacity) {
     struct Entry **new_entries, *curr_entry, **new_entry;
 
-    if (NULL == (new_entries = calloc(new_capacity, sizeof(*new_entries)))) {
-        print_ICE("");
-        perror("malloc");
-        return 1;
-    }
+    new_entries = safe_calloc(new_capacity, sizeof(*new_entries));
     for (unsigned int i = 0; i < map->capacity; i++) {
         for (curr_entry = map->entries[i];
             NULL != curr_entry;
@@ -123,9 +118,7 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void *prev) {
             (*curr_entry)->value = value;
             return 0;
         } else if (0 > cmp) {
-            if (NULL == (new_entry = Entry(key, key_len, value, h))) {
-                return 1;
-            }
+            new_entry = Entry(key, key_len, value, h);
             new_entry->next = *curr_entry;
             *curr_entry = new_entry;
             map->size++;
@@ -135,9 +128,7 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void *prev) {
             return 0;
         }
     }
-    if (NULL == (new_entry = Entry(key, key_len, value, h))) {
-        return 1;
-    }
+    new_entry = Entry(key, key_len, value, h);
     *curr_entry = new_entry;
     map->size++;
     if ((double)map->size / map->capacity >= map->load_factor) {
@@ -198,9 +189,7 @@ json_Map(const Map *map, JSON_MAP_TYPE json_value, FILE *out, int indent) {
                 json_comma(out, indent);
             }
             first = 0;
-            char str[curr->len + 1];
-            sprintf(str, "%*s", (int)curr->len, (char *)curr->key);
-            json_label(str, out);
+            json_nlabel(curr->key, (int)curr->len, out);
             json_value(curr->value, out, indent);
         }
     }
@@ -212,16 +201,8 @@ copy_Map(const Map *map, MAP_COPY_FUNC copy_value) {
     Map *new_map;
     struct Entry **entries;
 
-    if (NULL == (new_map = malloc(sizeof(*new_map)))) {
-        print_ICE("");
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    if (NULL == (entries = calloc(map->capacity, sizeof(*entries)))) {
-        print_ICE("");
-        perror("");
-        exit(EXIT_FAILURE);
-    }
+    new_map = safe_malloc(sizeof(*new_map));
+    entries = calloc(map->capacity, sizeof(*entries));
     for (size_t i = 0; i < map->capacity; i++) {
         struct Entry **new_entry = &entries[i];
         for (struct Entry *curr = map->entries[i];
@@ -250,18 +231,70 @@ new_Map(unsigned int capacity, double load_factor) {
         print_ICE("cannot create Map with 0 capacity\n");
         exit(EXIT_FAILURE);
     }
-    if (NULL == (map = malloc(sizeof(*map)))) {
-        print_ICE("");
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    if (NULL == (entries = calloc(capacity, sizeof(*entries)))) {
-        print_ICE("");
-        perror("calloc");
-        exit(EXIT_FAILURE);
-    }
+    map = safe_malloc(sizeof(*map));
+    entries = safe_calloc(capacity, sizeof(*entries));
     *map = (Map){
         0, capacity, load_factor, entries
     };
     return map;
+}
+
+static int
+iterator_hasNext(Iterator *it) {
+    return NULL != it->data->next;
+}
+
+static void *
+iterator_next(Iterator *it) {
+    struct IteratorData *data = it->data;
+    void *ret = data->next;
+    if (ret == NULL) {
+        return NULL;
+    }
+    if (NULL != data->currEntry->next) {
+        data->currEntry = data->currEntry->next;
+        data->next = data->currEntry->value;
+    } else {
+        data->next = NULL;
+        for (size_t i = data->index + 1; i < data->map->capacity; i++) {
+            if (NULL != data->map->entries[i]) {
+                data->currEntry = data->map->entries[i];
+                data->next = data->currEntry->value;
+                data->index = i;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+static void
+iterator_delete(Iterator *it) {
+    free(it->data);
+    free(it);
+}
+
+Iterator *
+Map_iterator(Map *map) {
+    struct IteratorData *data;
+    struct Entry *currEntry = NULL;
+    void *next = NULL;
+    size_t index;
+    for (index = 0; index < map->capacity; index++) {
+        if (NULL != map->entries[index]) {
+            currEntry = map->entries[index];
+            next = currEntry->value;
+            break;
+        }
+    }
+
+    data = safe_malloc(sizeof(*data));
+    *data = (struct IteratorData){
+        map, currEntry, index, next
+    };
+    Iterator *it = safe_malloc(sizeof(*it));
+    *it = (Iterator){
+        data, iterator_hasNext, iterator_next, iterator_delete
+    };
+    return it;
 }

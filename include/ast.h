@@ -17,8 +17,19 @@ struct Field {
     struct Type *type;
 };
 
+struct ClassBody {
+    struct Vector *fields;       // Vector<Field*>
+    struct Vector *constructors; // Vector<AST*>
+};
+
 void
 json_AST(const AST *this, FILE *out, int indent);
+
+void
+json_field(const struct Field *field, FILE *out, int indent);
+
+void
+delete_field(struct Field *field);
 
 #define TypeCheck(root) getType_AST(root, NULL, NULL)
 int
@@ -53,7 +64,7 @@ new_ASTMember(struct YYLTYPE *loc, AST *expr, char *name);
 #define ASTCall(loc, expr, args) \
     new_ASTCall(loc, expr, args)
 AST *
-new_ASTCall(struct YYLTYPE *loc, AST *expr, AST *args);
+new_ASTCall(struct YYLTYPE *loc, AST *expr, struct Vector *args);
 
 #define ASTIndex(loc, expr, index) \
     new_ASTIndex(loc, expr, index)
@@ -71,7 +82,7 @@ AST *
 new_ASTClass(struct YYLTYPE *loc,
     struct Vector *generics,
     struct Vector *inherits,
-    struct Vector *fields);
+    struct ClassBody *fields);
 
 #define ASTImpl(loc, name, gen, stmts) new_ASTImpl(loc, name, gen, stmts)
 AST *
@@ -110,7 +121,7 @@ AST *
 new_ASTInit(struct YYLTYPE *loc,
     char *name,
     struct Vector *generics,
-    AST *args);
+    struct Vector *args);
 
 #define ASTTuple(loc, exprs) \
     new_ASTTuple(loc, exprs)

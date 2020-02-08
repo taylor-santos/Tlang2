@@ -20,6 +20,9 @@ void
 json_label(const char *label, FILE *out);
 
 void
+json_nlabel(const char *label, int len, FILE *out);
+
+void
 json_string(const char *value, FILE *out, int indent);
 
 void
