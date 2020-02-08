@@ -48,6 +48,7 @@ impl Foo {
 a, b, t := *(1, 2, (4, 5, 6));
 
 */
+
 Bar := class {
     x : int;
     new(int);
@@ -55,8 +56,8 @@ Bar := class {
 
 b := new Bar(5);
 
-fn := func(x: int, y: int) {
-
+fn := func(bar: Bar, y: int) => int {
+    return bar.x + y;
 };
 
-fn(5, fn(1,2));
+k := fn(b, fn(b,2));

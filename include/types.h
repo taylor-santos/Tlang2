@@ -18,7 +18,8 @@ typedef enum Types {
     TYPE_EXPR,
     TYPE_TUPLE,
     TYPE_SPREAD,
-    TYPE_NAMED
+    TYPE_NAMED,
+    TYPE_NONE
 } Types;
 
 typedef enum Qualifiers {
@@ -28,7 +29,7 @@ typedef enum Qualifiers {
 struct FuncType {
     struct Vector *generics; // Vector<char*>
     struct Vector *args;     // Vector<Type*>
-    Type *ret_type;          // NULLable
+    Type *ret_type;
 };
 
 struct ClassType {
@@ -69,6 +70,12 @@ typedef struct TypeCheckState {
     // is seen, add its AST to the map. At the end of type checking, check
     // that all classes have implementations.
     struct Map *classes; // Map<char*, AST*>
+    // NULL if not in function, otherwise return type of current function
+    Type *funcType;
+    // NULL initially, gets set by return statements. Used to tell if there are
+    // conflicting return types or if a non-void function didn't return a
+    // value on all code paths.
+    Type *retType;
 } TypeCheckState;
 
 void
@@ -144,14 +151,19 @@ new_ExprType(const struct YYLTYPE *loc,
 Type *
 new_TupleType(const struct YYLTYPE *loc, struct SparseVector *types);
 
+#define SpreadType(tuple) \
+    new_SpreadType(tuple)
+Type *
+new_SpreadType(Type *tuple);
+
 #define NamedType(loc, name, type) \
     new_NamedType(loc, name, type)
 Type *
 new_NamedType(const struct YYLTYPE *loc, char *name, Type *type);
 
-#define SpreadType(tuple) \
-    new_SpreadType(tuple)
+#define NoneType(loc) \
+    new_NoneType(loc)
 Type *
-new_SpreadType(Type *tuple);
+new_NoneType(const struct YYLTYPE *loc);
 
 #endif

@@ -81,6 +81,16 @@ getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
         } else {
             Type *expectType = Vector_get(func->args, i);
             if (TypeCompare(givenType, expectType, state)) {
+                char *expectName = typeToString(expectType);
+                char *givenName = typeToString(givenType);
+                print_code_error(stderr,
+                    getLoc_AST(arg),
+                    "incompatible argument type: expected \"%s\" but got "
+                    "\"%s\"",
+                    expectName,
+                    givenName);
+                free(expectName);
+                free(givenName);
                 status = 1;
             }
         }
@@ -88,11 +98,7 @@ getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
     if (status) {
         return 1;
     }
-    Type *ret_type = func->ret_type;
-    if (NULL != ret_type) {
-        ret_type = copy_type(ret_type);
-    }
-    *typeptr = this->type = ret_type;
+    *typeptr = this->type = copy_type(func->ret_type);
     return 0;
 }
 

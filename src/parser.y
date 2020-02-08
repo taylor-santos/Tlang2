@@ -132,7 +132,7 @@
             OptNamedArgs NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple
             DefVars Constructor OptArguments Arguments
 %type<svec> Types
-%type<type> Type TypeDef FuncDef OptRetType TypeOptNamed
+%type<type> Type TypeDef FuncDef TypeOptNamed
 %type<class> Fields OptFields
 %type<field> Field
 %type<qualifier> Qualifier
@@ -505,17 +505,12 @@ Qualifier
     }
 
 FuncDef
-  : T_FUNC OptGenerics '(' OptArgsOptNamed ')' OptRetType {
-        $$ = FuncType(&@$, $2, $4, $6);
+  : T_FUNC OptGenerics '(' OptArgsOptNamed ')' T_ARROW Type {
+        $$ = FuncType(&@$, $2, $4, $7);
     }
-
-OptRetType
-  : %empty {
-        $$ = NULL;
-    }
-  | T_ARROW Type {
-        $$ = $2;
-    }
+  | T_FUNC OptGenerics '(' OptArgsOptNamed ')' {
+          $$ = FuncType(&@$, $2, $4, NoneType(&@$));
+      }
 
 OptArgsOptNamed
   : %empty {
@@ -546,8 +541,11 @@ OptGenerics
     }
 
 Func
-  : T_FUNC OptGenerics '(' OptNamedArgs ')' OptRetType '{' OptStatements '}' {
-        $$ = ASTFunc(&@$, $2, $4, $6, $8);
+  : T_FUNC OptGenerics '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
+        $$ = ASTFunc(&@$, $2, $4, $7, $9);
+    }
+  | T_FUNC OptGenerics '(' OptNamedArgs ')' '{' OptStatements '}' {
+        $$ = ASTFunc(&@$, $2, $4, NoneType(&@$), $7);
     }
 
 OptNamedArgs

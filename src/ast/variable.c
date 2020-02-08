@@ -31,8 +31,13 @@ json(const ASTVariable *this, FILE *out, int indent) {
 static int
 getType(ASTVariable *this, TypeCheckState *state, Type **typeptr) {
     Type *type = NULL;
-    if (Map_get(state->symbols, this->name, strlen(this->name), &type) ||
-        !isInit(type)) {
+    if (Map_get(state->symbols, this->name, strlen(this->name), &type)) {
+        print_code_error(stderr,
+            this->loc,
+            "unknown variable \"%s\"",
+            this->name);
+        return 1;
+    } else if (!isInit(type)) {
         print_code_error(stderr,
             this->loc,
             "variable \"%s\" used before initialization",

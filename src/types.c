@@ -68,6 +68,9 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_NAMED:
             json_string("named", out, indent);
             break;
+        case TYPE_NONE:
+            json_string("none", out, indent);
+            break;
     }
     if (NULL != type->qualifiers) {
         json_comma(out, indent);
@@ -91,11 +94,9 @@ json_type(const Type *type, FILE *out, int indent) {
                 (JSON_MAP_TYPE)json_type,
                 out,
                 indent);
-            if (NULL != type->func.ret_type) {
-                json_comma(out, indent);
-                json_label("return type", out);
-                json_type(type->func.ret_type, out, indent);
-            }
+            json_comma(out, indent);
+            json_label("return type", out);
+            json_type(type->func.ret_type, out, indent);
             break;
         case TYPE_CLASS:
             json_comma(out, indent);
@@ -169,6 +170,8 @@ json_type(const Type *type, FILE *out, int indent) {
             json_label("type", out);
             json_type(type->named.type, out, indent);
             break;
+        case TYPE_NONE:
+            break;
     }
     json_end(out, &indent);
 }
@@ -193,10 +196,7 @@ copy_FuncType(struct FuncType func) {
 
     generics = copy_Vector(func.generics, (VEC_COPY_FUNC)safe_strdup_func);
     args = copy_Vector(func.args, (VEC_COPY_FUNC)copy_type);
-    ret_type = NULL;
-    if (NULL != func.ret_type) {
-        ret_type = copy_type(func.ret_type);
-    }
+    ret_type = copy_type(func.ret_type);
     return (struct FuncType){
         generics, args, ret_type
     };
@@ -313,6 +313,8 @@ copy_type(const Type *type) {
         case TYPE_NAMED:
             new_type->named = copy_NamedType(type->named);
             break;
+        case TYPE_NONE:
+            break;
     }
     return new_type;
 }
@@ -328,9 +330,7 @@ delete_type(Type *type) {
         case TYPE_FUNC:
             delete_Vector(type->func.generics, free);
             delete_Vector(type->func.args, (VEC_DELETE_FUNC)delete_type);
-            if (NULL != type->func.ret_type) {
-                delete_type(type->func.ret_type);
-            }
+            delete_type(type->func.ret_type);
             break;
         case TYPE_CLASS:
             delete_Vector(type->class.generics, free);
@@ -360,6 +360,8 @@ delete_type(Type *type) {
         case TYPE_NAMED:
             free(type->named.name);
             delete_type(type->named.type);
+            break;
+        case TYPE_NONE:
             break;
     }
     if (NULL != type->qualifiers) {
@@ -412,6 +414,9 @@ TypeCompare(const Type *type1,
         case TYPE_NAMED:
             print_ICE("TypeCompare not implemented for named types\n");
             return 1;
+        case TYPE_NONE:
+            print_ICE("TypeCompare not implemented for none type\n");
+            return 1;
     }
     return 1;
 }
@@ -462,6 +467,8 @@ TypeVerify(const Type *type, const TypeCheckState *state, char **msg) {
         case TYPE_NAMED:
             *msg = safe_strdup("TypeVerify not implemented for named types");
             return 1;
+        case TYPE_NONE:
+            return 0;
     }
     return 1;
 }
@@ -503,6 +510,9 @@ getTypeData(Type *type) {
             return &type->spread;
         case TYPE_NAMED:
             return &type->named;
+        case TYPE_NONE:
+            print_ICE("called getTypeData() on None type\n");
+            exit(EXIT_FAILURE);
     }
     return NULL;
 }
@@ -524,6 +534,8 @@ typeToString(const Type *type) {
             return safe_strdup("spread");
         case TYPE_NAMED:
             return typeToString(type->named.type);
+        case TYPE_NONE:
+            return safe_strdup("none");
     }
     return NULL;
 }
@@ -606,6 +618,19 @@ new_TupleType(const YYLTYPE *loc, SparseVector *types) {
 }
 
 Type *
+new_SpreadType(Type *tuple) {
+    Type *t;
+    if (tuple->type != TYPE_TUPLE) {
+        print_ICE("non-tuple typed passed to SpreadType constructor\n");
+        exit(EXIT_FAILURE);
+    }
+    t = copy_type(tuple);
+    t->type = TYPE_SPREAD;
+    t->spread.types = t->tuple.types;
+    return t;
+}
+
+Type *
 new_NamedType(const YYLTYPE *loc, char *name, Type *type) {
     Type *t;
 
@@ -620,14 +645,12 @@ new_NamedType(const YYLTYPE *loc, char *name, Type *type) {
 }
 
 Type *
-new_SpreadType(Type *tuple) {
+new_NoneType(const YYLTYPE *loc) {
     Type *t;
-    if (tuple->type != TYPE_TUPLE) {
-        print_ICE("non-tuple typed passed to SpreadType constructor\n");
-        exit(EXIT_FAILURE);
-    }
-    t = copy_type(tuple);
-    t->type = TYPE_SPREAD;
-    t->spread.types = t->tuple.types;
+
+    t = safe_malloc(sizeof(*t));
+    *t = (Type){
+        TYPE_NONE, NULL, 0, *loc, { { 0 } }
+    };
     return t;
 }

@@ -81,7 +81,7 @@ getType(ASTProgram *this,
     size_t n;
     int status = 0;
     TypeCheckState new_state = {
-        this->symbols, this->classes
+        this->symbols, this->classes, NULL, NULL
     };
 
     addBuiltins(this);
