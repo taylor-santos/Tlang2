@@ -80,6 +80,19 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     if (nsupers > 0) {
         print_warning("class inheritance not yet implemented\n");
     }
+    for (size_t i = 0; i < ncons; i++) {
+        Vector *con = Vector_get(this->cons, i);
+        size_t nargs = Vector_size(con);
+        for (size_t j = 0; j < nargs; j++) {
+            Type *argType = Vector_get(con, j);
+            char *msg;
+            if (TypeVerify(argType, state, &msg)) {
+                print_code_error(stderr, typeLoc(argType), msg);
+                free(msg);
+                status = 1;
+            }
+        }
+    }
     constructors = copy_Vector(this->cons, (VEC_COPY_FUNC)copy_cons);
     sort_Vector(constructors, (VEC_COMPARATOR)cons_compare);
     fields = Map();

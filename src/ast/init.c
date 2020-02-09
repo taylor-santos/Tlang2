@@ -89,6 +89,12 @@ getType(ASTInit *this, TypeCheckState *state, Type **typeptr) {
         // Implicit default constructor
         *typeptr = this->type =
             ObjectType(&this->loc, safe_strdup(this->name), Vector());
+        char *msg;
+        if (TypeVerify(this->type, state, &msg)) {
+            print_code_error(stderr, typeLoc(this->type), msg);
+            free(msg);
+            return 1;
+        }
         return 0;
     }
     for (size_t i = 0; i < ncons; i++) {

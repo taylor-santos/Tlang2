@@ -3,13 +3,25 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "json.h"
-#include "iterator.h"
 
 #define Map() new_Map(16, 0.75)
 
 typedef struct Map Map;
 typedef void (*MAP_DELETE_FUNC)(void *);
 typedef void *(*MAP_COPY_FUNC)(void *);
+
+typedef struct MapIterData {
+    void *key;
+    size_t len;
+    void *value;
+} MapIterData;
+
+typedef struct Iterator {
+    struct IteratorData *data;
+    int (*hasNext)(struct Iterator *this);
+    MapIterData (*next)(struct Iterator *this);
+    void (*delete)(struct Iterator *this);
+} Iterator;
 
 /*
  * Insert a value into the map at a given key. If data already exists with that
@@ -30,7 +42,11 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void *prev);
  */
 int
 Map_get(Map *map, const void *key, size_t key_len, void *value);
-#define Map_contains(map, key, len) Map_get(map, key, len, NULL)
+
+/*
+ * Return 1 if map has the given key, 0 otherwise.
+ */
+#define Map_contains(map, key, len) !Map_get(map, key, len, NULL)
 
 void
 delete_Map(Map *map, MAP_DELETE_FUNC delete_value);

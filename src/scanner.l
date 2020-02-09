@@ -193,6 +193,7 @@ const  { return T_CONST; }
 friend { return T_FRIEND; }
 true   { return T_TRUE; }
 false  { return T_FALSE; }
+maybe  { return T_MAYBE; }
 [:][=] { return T_DEF; }
 [=][>] { return T_ARROW; }
 [*][=] { return T_MUL_ASSIGN; }
@@ -219,7 +220,7 @@ false  { return T_FALSE; }
     return T_RANGE;
 }
 [[][0-9]+[\]] {
-    if (T_ERROR == parse_int(yytext+2, &yylval->int_lit, yylloc, filename)) {
+    if (T_ERROR == parse_int(yytext+1, &yylval->int_lit, yylloc, filename)) {
         return T_ERROR;
     }
     return T_INDEX;

@@ -24,7 +24,6 @@ struct IteratorData {
     Map *map;
     struct Entry *currEntry;
     size_t index;
-    void *next;
 };
 
 static struct Entry *
@@ -75,9 +74,7 @@ resize(Map *map, unsigned int new_capacity) {
 
     new_entries = safe_calloc(new_capacity, sizeof(*new_entries));
     for (unsigned int i = 0; i < map->capacity; i++) {
-        for (curr_entry = map->entries[i];
-            NULL != curr_entry;
-            curr_entry = curr_entry->next) {
+        for (curr_entry = map->entries[i]; NULL != curr_entry;) {
             unsigned long h = curr_entry->hash % new_capacity;
             for (new_entry = &new_entries[h];
                 NULL != *new_entry;
@@ -91,7 +88,7 @@ resize(Map *map, unsigned int new_capacity) {
             }
             struct Entry *tmp = curr_entry->next;
             curr_entry->next = *new_entry;
-            *new_entries = curr_entry;
+            *new_entry = curr_entry;
             curr_entry = tmp;
         }
     }
@@ -241,31 +238,32 @@ new_Map(unsigned int capacity, double load_factor) {
 
 static int
 iterator_hasNext(Iterator *it) {
-    return NULL != it->data->next;
+    return NULL != it->data->currEntry;
 }
 
-static void *
+static MapIterData
 iterator_next(Iterator *it) {
     struct IteratorData *data = it->data;
-    void *ret = data->next;
-    if (ret == NULL) {
-        return NULL;
+    if (data->currEntry == NULL) {
+        print_error("Iterator.next() called with no remaining values\n");
+        exit(EXIT_FAILURE);
     }
+    struct Entry *ret = data->currEntry;
     if (NULL != data->currEntry->next) {
         data->currEntry = data->currEntry->next;
-        data->next = data->currEntry->value;
     } else {
-        data->next = NULL;
+        data->currEntry = NULL;
         for (size_t i = data->index + 1; i < data->map->capacity; i++) {
             if (NULL != data->map->entries[i]) {
                 data->currEntry = data->map->entries[i];
-                data->next = data->currEntry->value;
                 data->index = i;
                 break;
             }
         }
     }
-    return ret;
+    return (MapIterData){
+        ret->key, ret->len, ret->value
+    };
 }
 
 static void
@@ -278,19 +276,17 @@ Iterator *
 Map_iterator(Map *map) {
     struct IteratorData *data;
     struct Entry *currEntry = NULL;
-    void *next = NULL;
     size_t index;
     for (index = 0; index < map->capacity; index++) {
         if (NULL != map->entries[index]) {
             currEntry = map->entries[index];
-            next = currEntry->value;
             break;
         }
     }
 
     data = safe_malloc(sizeof(*data));
     *data = (struct IteratorData){
-        map, currEntry, index, next
+        map, currEntry, index
     };
     Iterator *it = safe_malloc(sizeof(*it));
     *it = (Iterator){

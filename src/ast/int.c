@@ -27,7 +27,13 @@ json(const ASTInt *this, FILE *out, int indent) {
 }
 
 static int
-getType(ASTInt *this, UNUSED TypeCheckState *state, Type **typeptr) {
+getType(ASTInt *this, TypeCheckState *state, Type **typeptr) {
+    char *msg;
+    if (TypeVerify(this->type, state, &msg)) {
+        print_code_error(stderr, this->loc, msg);
+        free(msg);
+        return 1;
+    }
     *typeptr = this->type;
     return 0;
 }

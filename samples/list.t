@@ -48,16 +48,46 @@ impl Foo {
 a, b, t := *(1, 2, (4, 5, 6));
 
 */
+/*
+list: []int;
 
+A := class {
+    a: int;
+};
+
+B := class {
+    a: func() => int;
+    b: func();
+};
+
+C := class {
+    a: int;
+    b: int;
+};
+
+D := class {
+    a: func() => int;
+};
+
+Foo := class {
+    x : func(C) => D;
+};
 Bar := class {
-    x : int;
-    new(int);
+    x : func(A) => B;
+};
+fn := func(foo: Foo) => int {
+    return foo.x(new C()).a();
 };
 
-b := new Bar(5);
+bar := new Bar();
 
-fn := func(bar: Bar, y: int) => int {
-    return bar.x + y;
+a := fn(bar);
+*/
+list := new int[10];
+
+a := list[5];
+fn := func(x: int) => int {
+    return 5;
 };
 
-k := fn(b, fn(b,2));
+fn(a);

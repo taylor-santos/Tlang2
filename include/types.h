@@ -19,7 +19,9 @@ typedef enum Types {
     TYPE_TUPLE,
     TYPE_SPREAD,
     TYPE_NAMED,
-    TYPE_NONE
+    TYPE_NONE,
+    TYPE_ARRAY,
+    TYPE_MAYBE
 } Types;
 
 typedef enum Qualifiers {
@@ -42,6 +44,7 @@ struct ClassType {
 struct ObjectType {
     char *name;
     struct Vector *generics; // Vector<char*>
+    struct ClassType *class;
 };
 
 struct ExprType {
@@ -60,6 +63,14 @@ struct SpreadType {
 
 struct NamedType {
     char *name;
+    Type *type;
+};
+
+struct ArrayType {
+    Type *type;
+};
+
+struct MaybeType {
     Type *type;
 };
 
@@ -97,7 +108,7 @@ int
 TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
 
 int
-TypeVerify(const Type *type, const TypeCheckState *state, char **msg);
+TypeVerify(Type *type, const TypeCheckState *state, char **msg);
 
 Types
 typeOf(const Type *type);
@@ -165,5 +176,15 @@ new_NamedType(const struct YYLTYPE *loc, char *name, Type *type);
     new_NoneType(loc)
 Type *
 new_NoneType(const struct YYLTYPE *loc);
+
+#define ArrayType(loc, type) \
+    new_ArrayType(loc, type)
+Type *
+new_ArrayType(const struct YYLTYPE *loc, Type *type);
+
+#define MaybeType(loc, type) \
+    new_MaybeType(loc, type)
+Type *
+new_MaybeType(const struct YYLTYPE *loc, Type *type);
 
 #endif

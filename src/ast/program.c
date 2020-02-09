@@ -48,6 +48,7 @@ addBuiltins(ASTProgram *this) {
             0
         };
         Map *fields = Map();
+        /*
         for (unsigned long j = 0;
             j < sizeof(num_operators) / sizeof(*num_operators);
             j++) {
@@ -64,8 +65,10 @@ addBuiltins(ASTProgram *this) {
                 type,
                 NULL);
         }
+         */
         Type *type =
             ClassType(&loc, Vector(), Vector(), init_Vector(Vector()), fields);
+        setInit(type, 1);
         Map_put(this->symbols,
             num_builtins[i],
             strlen(num_builtins[i]),

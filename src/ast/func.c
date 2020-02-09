@@ -84,6 +84,7 @@ getType(ASTFunc *this, TypeCheckState *state, Type **typeptr) {
     }
     if (TypeVerify(this->ret_type, state, &msg)) {
         print_code_error(stderr, typeLoc(this->ret_type), msg);
+        free(msg);
         status = 1;
     }
     if (status) {

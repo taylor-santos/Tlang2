@@ -117,6 +117,7 @@
                    T_GE         ">="
                    T_INC        "++"
                    T_DEC        "--"
+                   T_MAYBE      "maybe"
                    T_ERROR      "lexing error"
                    END 0        "end of file"
 %token<str>        T_IDENT      "identifier"
@@ -468,6 +469,12 @@ TypeDef
   | '(' Types ')' {
         $$ = TupleType(&@$, $2);
     }
+  |  '[' ']' Type {
+        $$ = ArrayType(&@$, $3);
+    }
+  | T_MAYBE Type {
+        $$ = MaybeType(&@$, $2);
+    }
 
 Types
   : Type T_RANGE {
@@ -565,6 +572,9 @@ NamedArgs
 Init
   : T_NEW T_IDENT OptGenerics '(' OptArguments ')' {
         $$ = ASTInit(&@$, $2, $3, $5);
+    }
+  | T_NEW Type T_INDEX {
+        $$ = ASTArray(&@$, $2, $3);
     }
 
 OptArguments

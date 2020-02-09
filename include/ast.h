@@ -153,4 +153,11 @@ new_ASTString(struct YYLTYPE *loc, struct dstring *str);
 AST *
 new_ASTBool(struct YYLTYPE *loc, int val);
 
+#define ASTArray(loc, type, index) \
+    new_ASTArray(loc, type, index)
+AST *
+new_ASTArray(struct YYLTYPE *loc,
+    struct Type *array_type,
+    long long int index);
+
 #endif

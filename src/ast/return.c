@@ -89,7 +89,7 @@ new_ASTReturn(struct YYLTYPE *loc, AST *expr) {
 
     ret = safe_malloc(sizeof(*ret));
     *ret = (ASTReturn){
-        json, getType, delete, *loc, expr
+        json, getType, delete, *loc, expr, NULL
     };
     return (AST *)ret;
 }
