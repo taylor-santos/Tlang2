@@ -175,4 +175,9 @@ new_ASTIf(YYLTYPE loc,
     struct Vector *trueStmts,
     struct Vector *falseStmts);
 
+#define ASTWhile(loc, cond, stmts) \
+    new_ASTWhile(loc, cond, stmts)
+AST *
+new_ASTWhile(YYLTYPE loc, AST *cond, struct Vector *stmts);
+
 #endif

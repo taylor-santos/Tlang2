@@ -96,6 +96,7 @@
                    T_MAYBE      "maybe"
                    T_IF         "if"
                    T_ELSE       "else"
+                   T_WHILE      "while"
                    T_IS         "is"
                    T_NOT        "not"
                    T_SWITCH     "switch"
@@ -125,7 +126,7 @@
 %token<double_lit> T_DOUBLE     "double literal"
 
 %type<ast>  File Statement Definition Expression Class Return OptExpression Func
-            Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If
+            Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If While
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
             OptNamedArgs NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple
             DefVars Constructor OptArguments Arguments OptElse
@@ -168,6 +169,7 @@ Statements
 Statement
   : Definition
   | If
+  | While
   | Impl
   | TypeStmt ';'
   | Expression ';'
@@ -206,6 +208,11 @@ OptElse
     }
   | T_ELSE '{' OptStatements '}' {
         $$ = $3;
+    }
+
+While
+  : T_WHILE '(' Expression ')' '{' OptStatements '}' {
+        $$ = ASTWhile(@$, $3, $6);
     }
 
 TypeStmt

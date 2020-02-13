@@ -97,15 +97,18 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                         status = 1;
                     } else {
                         setInit(prev_type, 1);
+                        if (NULL != state->newInitSymbols) {
+                            Map_put(state->newInitSymbols,
+                                name,
+                                len,
+                                NULL,
+                                NULL);
+                        }
                     }
                 } else {
                     Type *type_copy = copy_type(type);
                     setInit(type_copy, 1);
                     Map_put(state->symbols, name, len, type_copy, NULL);
-                    if (NULL != state->newSymbols) {
-                        type_copy = copy_type(expr_type);
-                        Map_put(state->newSymbols, name, len, type_copy, NULL);
-                    }
                 }
                 var_index++;
             }
@@ -136,15 +139,14 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                     status = 1;
                 } else {
                     setInit(prev_type, 1);
+                    if (NULL != state->newInitSymbols) {
+                        Map_put(state->newInitSymbols, name, len, NULL, NULL);
+                    }
                 }
             } else {
                 Type *type_copy = copy_type(expr_type);
                 setInit(type_copy, 1);
                 Map_put(state->symbols, name, len, type_copy, NULL);
-                if (NULL != state->newSymbols) {
-                    type_copy = copy_type(expr_type);
-                    Map_put(state->newSymbols, name, len, type_copy, NULL);
-                }
             }
         }
     }

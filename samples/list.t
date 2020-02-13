@@ -103,12 +103,15 @@ fn := func(a: A) => int {
 };
 
 main := func(b: bool) => int {
+    a: A;
     if (b) {
         a := new Foo();
         fn(a);
     } else {
         a := new Bar();
-        fn(a);
+    }
+    while (b) {
+        a := new Foo();
     }
     fn(a);
     return 0;

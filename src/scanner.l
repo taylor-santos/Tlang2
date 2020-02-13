@@ -196,6 +196,7 @@ false  { return T_FALSE; }
 maybe  { return T_MAYBE; }
 if     { return T_IF; }
 else   { return T_ELSE; }
+while  { return T_WHILE; }
 is     { return T_IS; }
 not    { return T_NOT; }
 switch { return T_SWITCH; }

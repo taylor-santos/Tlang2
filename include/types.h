@@ -84,7 +84,7 @@ typedef struct TypeCheckState {
     // the outer scope if they are defined in all code paths. Defaults to
     // NULL and allocation and destruction must be handled by the control
     // flow AST node.
-    struct Map *newSymbols; // Map<char*, Type*>
+    struct Map *newInitSymbols; // Map<char*, NULL>
     struct Vector *classes; // Vector<const struct ClassType*>
     const struct ClassType *builtins[NUM_BUILTINS];
     // NULL if not in function, otherwise return type of current function
@@ -136,13 +136,6 @@ getTypeData(Type *type);
 
 char *
 typeToString(const Type *type);
-
-int
-TypeIntersection(const Type *type1,
-    const Type *type2,
-    const TypeCheckState *state,
-    YYLTYPE loc,
-    Type **typeptr);
 
 #define FuncType(loc, gen, args, ret) \
     new_FuncType(loc, gen, args, ret)
