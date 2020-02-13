@@ -53,7 +53,7 @@ print_ICE(const char *fmt, ...) {
 }
 
 void
-print_code_error(FILE *out, struct YYLTYPE loc, const char *msg, ...) {
+print_code_error(FILE *out, YYLTYPE loc, const char *msg, ...) {
     va_list args;
     FILE *in;
     char *line = NULL;

@@ -8,41 +8,38 @@
 typedef struct ASTCall ASTCall;
 
 struct ASTCall {
-    void (*json)(const ASTCall *this, FILE *out, int indent);
-    int (*getType)(ASTCall *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTCall *this);
-    struct YYLTYPE loc;
+    AST super;
     AST *expr;
     Vector *args; // Vector<AST*>
     Type *type;   // NULL until type checker is executed.
 };
 
 static void
-json(const ASTCall *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTCall *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("call", out, indent);
     json_comma(out, indent);
     json_label("expr", out);
-    json_AST(this->expr, out, indent);
+    json_AST(ast->expr, out, indent);
     json_comma(out, indent);
     json_label("args", out);
-    json_vector(this->args, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->args, (JSON_MAP_TYPE)json_AST, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
+getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
+    ASTCall *ast = this;
     Type *funcType = NULL;
-    if (getType_AST(this->expr, state, &funcType)) {
+    if (ast->expr->getType(ast->expr, state, &funcType)) {
         return 1;
     }
     if (TYPE_FUNC != typeOf(funcType)) {
         char *typeName = typeToString(funcType);
         print_code_error(stderr,
-            this->loc,
+            ast->super.loc,
             "function call attempted on non-function \"%s\" expression",
             typeName);
         free(typeName);
@@ -52,15 +49,15 @@ getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
     size_t ngen = Vector_size(func->generics);
     if (ngen > 0) {
         print_code_error(stderr,
-            this->loc,
+            ast->super.loc,
             "generic function call type checker not implemented");
         return 1;
     }
     size_t nargs = Vector_size(func->args);
-    size_t ngiven = Vector_size(this->args);
+    size_t ngiven = Vector_size(ast->args);
     if (nargs != ngiven) {
         print_code_error(stderr,
-            this->loc,
+            ast->super.loc,
             "%d argument%s given to a function that expects %d argument%s",
             ngiven,
             ngiven == 1
@@ -74,9 +71,9 @@ getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
     }
     int status = 0;
     for (size_t i = 0; i < nargs; i++) {
-        AST *arg = Vector_get(this->args, i);
+        AST *arg = Vector_get(ast->args, i);
         Type *givenType = NULL;
-        if (getType_AST(arg, state, &givenType)) {
+        if (arg->getType(arg, state, &givenType)) {
             status = 1;
         } else {
             Type *expectType = Vector_get(func->args, i);
@@ -84,7 +81,7 @@ getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
                 char *expectName = typeToString(expectType);
                 char *givenName = typeToString(givenType);
                 print_code_error(stderr,
-                    getLoc_AST(arg),
+                    arg->loc,
                     "incompatible argument type: expected \"%s\" but got "
                     "\"%s\"",
                     expectName,
@@ -98,27 +95,28 @@ getType(ASTCall *this, TypeCheckState *state, UNUSED Type **typeptr) {
     if (status) {
         return 1;
     }
-    *typeptr = this->type = copy_type(func->ret_type);
+    *typeptr = ast->type = copy_type(func->ret_type);
     return 0;
 }
 
 static void
-delete(ASTCall *this) {
-    delete_AST(this->expr);
-    delete_Vector(this->args, (VEC_DELETE_FUNC)delete_AST);
-    if (NULL != this->type) {
-        delete_type(this->type);
+delete(void *this) {
+    ASTCall *ast = this;
+    delete_AST(ast->expr);
+    delete_Vector(ast->args, (VEC_DELETE_FUNC)delete_AST);
+    if (NULL != ast->type) {
+        delete_type(ast->type);
     }
     free(this);
 }
 
 AST *
-new_ASTCall(struct YYLTYPE *loc, AST *expr, Vector *args) {
+new_ASTCall(YYLTYPE loc, AST *expr, Vector *args) {
     ASTCall *call = NULL;
 
     call = safe_malloc(sizeof(*call));
     *call = (ASTCall){
-        json, getType, delete, *loc, expr, args, NULL
+        { json, getType, delete, loc }, expr, args, NULL
     };
     return (AST *)call;
 }

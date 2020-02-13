@@ -12,17 +12,18 @@ struct Type {
     Types type;
     Vector *qualifiers; // Vector<Qualifiers*>
     unsigned char init : 1;
+    unsigned char copy : 1;
     YYLTYPE loc;
     union {
-        struct FuncType func;
-        struct ClassType class;
-        struct ObjectType object;
-        struct ExprType expr;
-        struct TupleType tuple;
-        struct SpreadType spread;
-        struct NamedType named;
-        struct ArrayType array;
-        struct MaybeType maybe;
+        struct FuncType *func;
+        struct ClassType *class;
+        struct ObjectType *object;
+        struct ExprType *expr;
+        struct TupleType *tuple;
+        struct SpreadType *spread;
+        struct NamedType *named;
+        struct ArrayType *array;
+        struct MaybeType *maybe;
     };
 };
 
@@ -92,42 +93,42 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_FUNC:
             json_comma(out, indent);
             json_label("generics", out);
-            json_vector(type->func.generics,
+            json_vector(type->func->generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("args", out);
-            json_vector(type->func.args,
+            json_vector(type->func->args,
                 (JSON_MAP_TYPE)json_type,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("return type", out);
-            json_type(type->func.ret_type, out, indent);
+            json_type(type->func->ret_type, out, indent);
             break;
         case TYPE_CLASS:
             json_comma(out, indent);
             json_label("generics", out);
-            json_vector(type->class.generics,
+            json_vector(type->class->generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("supers", out);
-            json_vector(type->class.supers,
+            json_vector(type->class->supers,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("constructors", out);
-            json_vector(type->class.constructors,
+            json_vector(type->class->constructors,
                 (JSON_MAP_TYPE)json_constructor,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("fields", out);
-            json_Map(type->class.fields,
+            json_Map(type->class->fields,
                 (JSON_MAP_TYPE)json_type,
                 out,
                 indent);
@@ -135,10 +136,10 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_OBJECT:
             json_comma(out, indent);
             json_label("name", out);
-            json_string(type->object.name, out, indent);
+            json_string(type->object->name, out, indent);
             json_comma(out, indent);
             json_label("generics", out);
-            json_vector(type->object.generics,
+            json_vector(type->object->generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
@@ -146,10 +147,10 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_EXPR:
             json_comma(out, indent);
             json_label("expr", out);
-            json_AST(type->expr.expr, out, indent);
+            json_AST(type->expr->expr, out, indent);
             json_comma(out, indent);
             json_label("generics", out);
-            json_vector(type->expr.generics,
+            json_vector(type->expr->generics,
                 (JSON_MAP_TYPE)json_string,
                 out,
                 indent);
@@ -157,7 +158,7 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_TUPLE:
             json_comma(out, indent);
             json_label("types", out);
-            json_sparse_vector(type->tuple.types,
+            json_sparse_vector(type->tuple->types,
                 (JSON_MAP_TYPE)json_type,
                 out,
                 indent);
@@ -165,7 +166,7 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_SPREAD:
             json_comma(out, indent);
             json_label("types", out);
-            json_sparse_vector(type->spread.types,
+            json_sparse_vector(type->spread->types,
                 (JSON_MAP_TYPE)json_type,
                 out,
                 indent);
@@ -173,22 +174,22 @@ json_type(const Type *type, FILE *out, int indent) {
         case TYPE_NAMED:
             json_comma(out, indent);
             json_label("name", out);
-            json_string(type->named.name, out, indent);
+            json_string(type->named->name, out, indent);
             json_comma(out, indent);
             json_label("type", out);
-            json_type(type->named.type, out, indent);
+            json_type(type->named->type, out, indent);
             break;
         case TYPE_NONE:
             break;
         case TYPE_ARRAY:
             json_comma(out, indent);
             json_label("type", out);
-            json_type(type->array.type, out, indent);
+            json_type(type->array->type, out, indent);
             break;
         case TYPE_MAYBE:
             json_comma(out, indent);
             json_label("type", out);
-            json_type(type->maybe.type, out, indent);
+            json_type(type->maybe->type, out, indent);
             break;
     }
     json_end(out, &indent);
@@ -206,112 +207,6 @@ json_qualifier(const Qualifiers *value, FILE *out, int indent) {
     }
 }
 
-struct FuncType
-copy_FuncType(struct FuncType func) {
-    Vector *generics;
-    Vector *args;
-    Type *ret_type = NULL;
-
-    generics = copy_Vector(func.generics, (VEC_COPY_FUNC)safe_strdup_func);
-    args = copy_Vector(func.args, (VEC_COPY_FUNC)copy_type);
-    ret_type = copy_type(func.ret_type);
-    return (struct FuncType){
-        generics, args, ret_type
-    };
-}
-
-static Vector *
-copy_constructor(const Vector *cons) {
-    return copy_Vector(cons, (VEC_COPY_FUNC)copy_type);
-}
-
-struct ClassType
-copy_ClassType(struct ClassType class) {
-    Vector *generics, *supers, *cons;
-    Map *fields;
-
-    generics = copy_Vector(class.generics, (VEC_COPY_FUNC)safe_strdup_func);
-    supers = copy_Vector(class.supers, (VEC_COPY_FUNC)safe_strdup_func);
-    cons = copy_Vector(class.constructors, (VEC_COPY_FUNC)copy_constructor);
-    fields = copy_Map(class.fields, (MAP_COPY_FUNC)copy_type);
-    return (struct ClassType){
-        generics, supers, cons, fields
-    };
-}
-
-struct ObjectType
-copy_ObjectType(struct ObjectType object) {
-    char *name;
-    Vector *generics;
-
-    name = safe_strdup(object.name);
-    generics = copy_Vector(object.generics, (VEC_COPY_FUNC)safe_strdup_func);
-    return (struct ObjectType){
-        name, generics, object.class
-    };
-}
-
-struct ExprType
-copy_ExprType(struct ExprType expr) {
-    Vector *generics;
-    generics = copy_Vector(expr.generics, (VEC_COPY_FUNC)safe_strdup_func);
-    return (struct ExprType){
-        expr.expr, generics, 0
-    };
-}
-
-struct TupleType
-copy_TupleType(struct TupleType tuple) {
-    SparseVector *types;
-
-    types = copy_SparseVector(tuple.types, (SVEC_COPY_FUNC)copy_type);
-    return (struct TupleType){
-        types
-    };
-}
-
-struct SpreadType
-copy_SpreadType(struct SpreadType spread) {
-    SparseVector *types;
-
-    types = copy_SparseVector(spread.types, (SVEC_COPY_FUNC)copy_type);
-    return (struct SpreadType){
-        types
-    };
-}
-
-struct NamedType
-copy_NamedType(struct NamedType named) {
-    char *name;
-    Type *type;
-
-    name = safe_strdup(named.name);
-    type = copy_type(named.type);
-    return (struct NamedType){
-        name, type
-    };
-}
-
-struct ArrayType
-copy_ArrayType(struct ArrayType array) {
-    Type *type;
-
-    type = copy_type(array.type);
-    return (struct ArrayType){
-        type
-    };
-}
-
-struct MaybeType
-copy_MaybeType(struct MaybeType maybe) {
-    Type *type;
-
-    type = copy_type(maybe.type);
-    return (struct MaybeType){
-        type
-    };
-}
-
 Type *
 copy_type(const Type *type) {
     Type *new_type;
@@ -326,40 +221,9 @@ copy_type(const Type *type) {
         qualifiers =
             copy_Vector(type->qualifiers, (VEC_COPY_FUNC)copy_Qualifiers);
     }
-    *new_type = (Type){
-        type->type, qualifiers, type->init, type->loc, { { 0 } }
-    };
-    switch (type->type) {
-        case TYPE_FUNC:
-            new_type->func = copy_FuncType(type->func);
-            break;
-        case TYPE_CLASS:
-            new_type->class = copy_ClassType(type->class);
-            break;
-        case TYPE_OBJECT:
-            new_type->object = copy_ObjectType(type->object);
-            break;
-        case TYPE_EXPR:
-            new_type->expr = copy_ExprType(type->expr);
-            break;
-        case TYPE_TUPLE:
-            new_type->tuple = copy_TupleType(type->tuple);
-            break;
-        case TYPE_SPREAD:
-            new_type->spread = copy_SpreadType(type->spread);
-            break;
-        case TYPE_NAMED:
-            new_type->named = copy_NamedType(type->named);
-            break;
-        case TYPE_NONE:
-            break;
-        case TYPE_ARRAY:
-            new_type->array = copy_ArrayType(type->array);
-            break;
-        case TYPE_MAYBE:
-            new_type->maybe = copy_MaybeType(type->maybe);
-            break;
-    }
+    *new_type = *type;
+    new_type->qualifiers = qualifiers;
+    new_type->copy = 1;
     return new_type;
 }
 
@@ -370,54 +234,69 @@ delete_cons(Vector *cons) {
 
 void
 delete_type(Type *type) {
-    switch (type->type) {
-        case TYPE_FUNC:
-            delete_Vector(type->func.generics, free);
-            delete_Vector(type->func.args, (VEC_DELETE_FUNC)delete_type);
-            delete_type(type->func.ret_type);
-            break;
-        case TYPE_CLASS:
-            delete_Vector(type->class.generics, free);
-            delete_Vector(type->class.supers, free);
-            delete_Vector(type->class.constructors,
-                (VEC_DELETE_FUNC)delete_cons);
-            delete_Map(type->class.fields, (MAP_DELETE_FUNC)delete_type);
-            break;
-        case TYPE_OBJECT:
-            free(type->object.name);
-            delete_Vector(type->object.generics, free);
-            break;
-        case TYPE_EXPR:
-            if (type->expr.ownsAST) {
-                delete_AST(type->expr.expr);
-            }
-            delete_Vector(type->expr.generics, free);
-            break;
-        case TYPE_TUPLE:
-            delete_SparseVector(type->tuple.types,
-                (VEC_DELETE_FUNC)delete_type);
-            break;
-        case TYPE_SPREAD:
-            delete_SparseVector(type->spread.types,
-                (VEC_DELETE_FUNC)delete_type);
-            break;
-        case TYPE_NAMED:
-            free(type->named.name);
-            delete_type(type->named.type);
-            break;
-        case TYPE_NONE:
-            break;
-        case TYPE_ARRAY:
-            delete_type(type->array.type);
-            break;
-        case TYPE_MAYBE:
-            delete_type(type->maybe.type);
-            break;
+    if (0 == type->copy) {
+        switch (type->type) {
+            case TYPE_FUNC:
+                delete_Vector(type->func->generics, free);
+                delete_Vector(type->func->args, (VEC_DELETE_FUNC)delete_type);
+                delete_type(type->func->ret_type);
+                free(type->func);
+                break;
+            case TYPE_CLASS:
+                // Delete class definitions from program's "classes" list
+                break;
+            case TYPE_OBJECT:
+                free(type->object->name);
+                delete_Vector(type->object->generics, free);
+                free(type->object);
+                break;
+            case TYPE_EXPR:
+                if (type->expr->ownsAST) {
+                    delete_AST(type->expr->expr);
+                }
+                delete_Vector(type->expr->generics, free);
+                free(type->expr);
+                break;
+            case TYPE_TUPLE:
+                delete_SparseVector(type->tuple->types,
+                    (VEC_DELETE_FUNC)delete_type);
+                free(type->tuple);
+                break;
+            case TYPE_SPREAD:
+                delete_SparseVector(type->spread->types,
+                    (VEC_DELETE_FUNC)delete_type);
+                free(type->spread);
+                break;
+            case TYPE_NAMED:
+                free(type->named->name);
+                delete_type(type->named->type);
+                free(type->named);
+                break;
+            case TYPE_NONE:
+                break;
+            case TYPE_ARRAY:
+                delete_type(type->array->type);
+                free(type->array);
+                break;
+            case TYPE_MAYBE:
+                delete_type(type->maybe->type);
+                free(type->maybe);
+                break;
+        }
     }
     if (NULL != type->qualifiers) {
         delete_Vector(type->qualifiers, free);
     }
     free(type);
+}
+
+void
+delete_ClassType(struct ClassType *class) {
+    delete_Vector(class->generics, free);
+    delete_Vector(class->supers, free);
+    delete_Vector(class->constructors, (VEC_DELETE_FUNC)delete_cons);
+    delete_Map(class->fields, (MAP_DELETE_FUNC)delete_type);
+    free(class);
 }
 
 void
@@ -461,12 +340,13 @@ static int
 ObjectTypeCompare(const struct ObjectType *type1,
     const struct ObjectType *type2,
     const TypeCheckState *state) {
-    if (0 == strcmp(type1->name, type2->name)) {
-        return 0;
-    }
+
     if (type1->class == NULL || type2->class == NULL) {
         print_ICE("Unverified object type\n");
         exit(EXIT_FAILURE);
+    }
+    if (type1->class == type2->class) {
+        return 0;
     }
     const struct ClassType *class1 = type1->class, *class2 = type2->class;
     size_t ngens1 = Vector_size(class1->generics),
@@ -498,12 +378,12 @@ TypeCompare(const Type *type1,
     }
     switch (type1->type) {
         case TYPE_FUNC:
-            return FuncTypeCompare(&type1->func, &type2->func, state);
+            return FuncTypeCompare(type1->func, type2->func, state);
         case TYPE_CLASS:
             print_ICE("TypeCompare not implemented for classes\n");
             return 1;
         case TYPE_OBJECT:
-            return ObjectTypeCompare(&type1->object, &type2->object, state);
+            return ObjectTypeCompare(type1->object, type2->object, state);
         case TYPE_EXPR:
             print_ICE("TypeCompare not implemented for expressions\n");
             return 1;
@@ -520,7 +400,7 @@ TypeCompare(const Type *type1,
             print_ICE("TypeCompare not implemented for none type\n");
             return 1;
         case TYPE_ARRAY:
-            return TypeCompare(type1->array.type, type2->array.type, state);
+            return TypeCompare(type1->array->type, type2->array->type, state);
         case TYPE_MAYBE:
             print_ICE("TypeCompare not implemented for maybe type\n");
             return 1;
@@ -563,7 +443,7 @@ ObjectTypeVerify(struct ObjectType *object,
         }
         return 1;
     }
-    object->class = &classType->class;
+    object->class = classType->class;
     return 0;
 }
 
@@ -571,11 +451,11 @@ int
 TypeVerify(Type *type, const TypeCheckState *state, char **msg) {
     switch (type->type) {
         case TYPE_FUNC:
-            return FuncTypeVerify(&type->func, state, msg);
+            return FuncTypeVerify(type->func, state, msg);
         case TYPE_CLASS:
-            return ClassTypeVerify(&type->class, state, msg);
+            return ClassTypeVerify(type->class, state, msg);
         case TYPE_OBJECT:
-            return ObjectTypeVerify(&type->object, state, msg);
+            return ObjectTypeVerify(type->object, state, msg);
         case TYPE_EXPR:
             *msg = safe_strdup("TypeVerify not implemented for expressions");
             return 1;
@@ -591,9 +471,9 @@ TypeVerify(Type *type, const TypeCheckState *state, char **msg) {
         case TYPE_NONE:
             return 0;
         case TYPE_ARRAY:
-            return TypeVerify(type->array.type, state, msg);
+            return TypeVerify(type->array->type, state, msg);
         case TYPE_MAYBE:
-            return TypeVerify(type->maybe.type, state, msg);
+            return TypeVerify(type->maybe->type, state, msg);
     }
     return 1;
 }
@@ -622,28 +502,45 @@ const void *
 getTypeData(Type *type) {
     switch (type->type) {
         case TYPE_FUNC:
-            return &type->func;
+            return type->func;
         case TYPE_CLASS:
-            return &type->class;
+            return type->class;
         case TYPE_OBJECT:
-            return &type->object;
+            return type->object;
         case TYPE_EXPR:
-            return &type->expr;
+            return type->expr;
         case TYPE_TUPLE:
-            return &type->tuple;
+            return type->tuple;
         case TYPE_SPREAD:
-            return &type->spread;
+            return type->spread;
         case TYPE_NAMED:
-            return &type->named;
+            return type->named;
         case TYPE_NONE:
             print_ICE("called getTypeData() on None type\n");
             exit(EXIT_FAILURE);
         case TYPE_ARRAY:
-            return &type->array;
+            return type->array;
         case TYPE_MAYBE:
-            return &type->maybe;
+            return type->maybe;
     }
     return NULL;
+}
+
+char *
+ClassTypeToString(const struct ClassType *class) {
+    dstring str = dstring("class{");
+    Iterator *it = Map_iterator(class->fields);
+    char *sep = "";
+    while (it->hasNext(it)) {
+        MapIterData field = it->next(it);
+        char *fieldType = typeToString(field.value);
+        append_vstr(&str, "%s%.*s:%s", sep, field.len, field.key, fieldType);
+        free(fieldType);
+        sep = ",";
+    }
+    it->delete(it);
+    append_str(&str, "}");
+    return str.str;
 }
 
 char *
@@ -653,9 +550,15 @@ typeToString(const Type *type) {
         case TYPE_FUNC:
             return safe_strdup("function");
         case TYPE_CLASS:
-            return safe_strdup("class");
+            return ClassTypeToString(type->class);
         case TYPE_OBJECT:
-            return safe_asprintf("%s instance", type->object.name);
+            if (type->object->name != NULL) {
+                return safe_asprintf("%s instance", type->object->name);
+            }
+            typeName = ClassTypeToString(type->object->class);
+            name = safe_asprintf("%s instance", typeName);
+            free(typeName);
+            return name;
         case TYPE_EXPR:
             return safe_strdup("expression");
         case TYPE_TUPLE:
@@ -663,16 +566,16 @@ typeToString(const Type *type) {
         case TYPE_SPREAD:
             return safe_strdup("spread");
         case TYPE_NAMED:
-            return typeToString(type->named.type);
+            return typeToString(type->named->type);
         case TYPE_NONE:
             return safe_strdup("none");
         case TYPE_ARRAY:
-            typeName = typeToString(type->array.type);
+            typeName = typeToString(type->array->type);
             name = safe_asprintf("array of %s", typeName);
             free(typeName);
             return name;
         case TYPE_MAYBE:
-            typeName = typeToString(type->array.type);
+            typeName = typeToString(type->array->type);
             name = safe_asprintf("maybe %s", typeName);
             free(typeName);
             return name;
@@ -680,79 +583,182 @@ typeToString(const Type *type) {
     return NULL;
 }
 
-Type *
-new_FuncType(const YYLTYPE *loc,
-    Vector *generics,
-    Vector *args,
-    Type *ret_type) {
-    Type *t;
+static int
+ObjectTypeIntersection(const struct ObjectType *type1,
+    const struct ObjectType *type2,
+    const TypeCheckState *state,
+    YYLTYPE loc,
+    Type **typeptr) {
+    size_t ngens1 = Vector_size(type1->generics),
+        ngens2 = Vector_size(type2->generics);
+    if (0 != ngens1 || 0 != ngens2) {
+        print_ICE("TypeIntersection not implemented for generic objects\n");
+        return 1;
+    }
+    Type *objectType = ObjectType(loc, NULL, Vector());
+    setInit(objectType, 1);
+    struct ClassType *class = malloc(sizeof(*class));
+    Map *fields = Map();
+    Iterator *it = Map_iterator(type1->class->fields);
+    while (it->hasNext(it)) {
+        MapIterData field = it->next(it);
+        Type *field1 = field.value, *field2 = NULL;
+        if (!Map_get(type2->class->fields, field.key, field.len, &field2)) {
+            Type *newField;
+            if (!TypeIntersection(field1, field2, state, loc, &newField)) {
+                Map_put(fields, field.key, field.len, newField, NULL);
+            }
+        }
+    }
+    it->delete(it);
+    *class = (struct ClassType){
+        Vector(), Vector(), Vector(), fields
+    };
+    objectType->object->class = class;
+    Vector_append(state->classes, class);
+    *typeptr = objectType;
+    return 0;
+}
 
+int
+TypeIntersection(const Type *type1,
+    const Type *type2,
+    const TypeCheckState *state,
+    YYLTYPE loc,
+    Type **typeptr) {
+    if (type1->type != type2->type) {
+        return 1;
+    }
+    if (0 == TypeCompare(type1, type2, state)) {
+        // type1 IS-A type2, so type2 is the intersection of the two.
+        *typeptr = copy_type(type2);
+        return 0;
+    }
+    if (0 == TypeCompare(type2, type1, state)) {
+        // type2 IS-A type1, so type1 is the intersection of the two.
+        *typeptr = copy_type(type1);
+        return 0;
+    }
+    // Neither type is a subtype of the other, build a new type to represent
+    // the intersection.
+    switch (type1->type) {
+        case TYPE_FUNC:
+            print_ICE("TypeIntersection not implemented for function type\n");
+            return 1;
+        case TYPE_CLASS:
+            print_ICE("TypeIntersection not implemented for classes\n");
+            return 1;
+        case TYPE_OBJECT:
+            return ObjectTypeIntersection(type1->object,
+                type2->object,
+                state,
+                loc,
+                typeptr);
+        case TYPE_EXPR:
+            print_ICE("TypeIntersection not implemented for expressions\n");
+            return 1;
+        case TYPE_TUPLE:
+            print_ICE("TypeIntersection not implemented for tuples\n");
+            return 1;
+        case TYPE_SPREAD:
+            print_ICE("TypeIntersection not implemented for spread tuples\n");
+            return 1;
+        case TYPE_NAMED:
+            print_ICE("TypeIntersection not implemented for named types\n");
+            return 1;
+        case TYPE_NONE:
+            print_ICE("TypeIntersection not implemented for none type\n");
+            return 1;
+        case TYPE_ARRAY:
+            print_ICE("TypeIntersection not implemented for array type\n");
+            return 1;
+        case TYPE_MAYBE:
+            print_ICE("TypeIntersection not implemented for maybe type\n");
+            return 1;
+    }
+    return 1;
+}
+
+Type *
+new_FuncType(YYLTYPE loc, Vector *generics, Vector *args, Type *ret_type) {
+    Type *t;
+    struct FuncType *func;
+
+    func = safe_malloc(sizeof(*func));
+    *func = (struct FuncType){
+        generics, args, ret_type
+    };
     t = safe_malloc(sizeof(*t));
     *t = (Type){
-        TYPE_FUNC, NULL, 0, *loc, { { 0 } }
-    };
-    t->func = (struct FuncType){
-        generics, args, ret_type
+        TYPE_FUNC, NULL, 0, 0, loc, .func=func
     };
     return t;
 }
 
 Type *
-new_ClassType(const YYLTYPE *loc,
+new_ClassType(YYLTYPE loc,
     struct Vector *generics,
     struct Vector *supers,
     struct Vector *cons,
     struct Map *fields) {
     Type *t;
+    struct ClassType *class;
 
-    t = safe_malloc(sizeof(*t));
-    *t = (Type){
-        TYPE_CLASS, NULL, 0, *loc, { { 0 } }
-    };
-    t->class = (struct ClassType){
+    class = safe_malloc(sizeof(*class));
+    *class = (struct ClassType){
         generics, supers, cons, fields
     };
+    t = safe_malloc(sizeof(*t));
+    *t = (Type){
+        TYPE_CLASS, NULL, 0, 0, loc, .class=class
+    };
     return t;
 }
 
 Type *
-new_ObjectType(const YYLTYPE *loc, char *name, Vector *generics) {
+new_ObjectType(YYLTYPE loc, char *name, Vector *generics) {
     Type *t;
+    struct ObjectType *object;
 
-    t = safe_malloc(sizeof(*t));
-    *t = (Type){
-        TYPE_OBJECT, NULL, 0, *loc, { { 0 } }
-    };
-    t->object = (struct ObjectType){
+    object = safe_malloc(sizeof(*object));
+    *object = (struct ObjectType){
         name, generics, NULL
     };
+    t = safe_malloc(sizeof(*t));
+    *t = (Type){
+        TYPE_OBJECT, NULL, 0, 0, loc, .object=object
+    };
     return t;
 }
 
 Type *
-new_ExprType(const YYLTYPE *loc, AST *expr, Vector *generics) {
+new_ExprType(YYLTYPE loc, AST *expr, Vector *generics) {
     Type *t;
+    struct ExprType *exprType;
 
-    t = safe_malloc(sizeof(*t));
-    *t = (Type){
-        TYPE_EXPR, NULL, 0, *loc, { { 0 } }
-    };
-    t->expr = (struct ExprType){
+    exprType = safe_malloc(sizeof(*exprType));
+    *exprType = (struct ExprType){
         expr, generics, 1
     };
+    t = safe_malloc(sizeof(*t));
+    *t = (Type){
+        TYPE_EXPR, NULL, 0, 0, loc, .expr=exprType
+    };
     return t;
 }
 
 Type *
-new_TupleType(const YYLTYPE *loc, SparseVector *types) {
+new_TupleType(YYLTYPE loc, SparseVector *types) {
     Type *t;
+    struct TupleType *tuple;
 
+    tuple = safe_malloc(sizeof(*tuple));
+    *tuple = (struct TupleType){
+        types
+    };
     t = safe_malloc(sizeof(*t));
     *t = (Type){
-        TYPE_TUPLE, NULL, 0, *loc, { { 0 } }
-    };
-    t->tuple = (struct TupleType){
-        types
+        TYPE_TUPLE, NULL, 0, 0, loc, .tuple=tuple
     };
     return t;
 }
@@ -760,65 +766,72 @@ new_TupleType(const YYLTYPE *loc, SparseVector *types) {
 Type *
 new_SpreadType(Type *tuple) {
     Type *t;
+
     if (tuple->type != TYPE_TUPLE) {
         print_ICE("non-tuple typed passed to SpreadType constructor\n");
         exit(EXIT_FAILURE);
     }
     t = copy_type(tuple);
     t->type = TYPE_SPREAD;
-    t->spread.types = t->tuple.types;
+    t->spread->types = t->tuple->types;
     return t;
 }
 
 Type *
-new_NamedType(const YYLTYPE *loc, char *name, Type *type) {
+new_NamedType(YYLTYPE loc, char *name, Type *type) {
     Type *t;
+    struct NamedType *named;
 
-    t = safe_malloc(sizeof(*t));
-    *t = (Type){
-        TYPE_NAMED, NULL, 0, *loc, { { 0 } }
-    };
-    t->named = (struct NamedType){
+    named = safe_malloc(sizeof(*named));
+    *named = (struct NamedType){
         name, type
     };
-    return t;
-}
-
-Type *
-new_NoneType(const YYLTYPE *loc) {
-    Type *t;
-
     t = safe_malloc(sizeof(*t));
     *t = (Type){
-        TYPE_NONE, NULL, 0, *loc, { { 0 } }
+        TYPE_NAMED, NULL, 0, 0, loc, .named=named
     };
     return t;
 }
 
 Type *
-new_ArrayType(const YYLTYPE *loc, Type *type) {
+new_NoneType(YYLTYPE loc) {
     Type *t;
 
     t = safe_malloc(sizeof(*t));
     *t = (Type){
-        TYPE_ARRAY, NULL, 0, *loc, { { 0 } }
+        TYPE_NONE, NULL, 0, 0, loc, { NULL }
     };
-    t->array = (struct ArrayType){
+    return t;
+}
+
+Type *
+new_ArrayType(YYLTYPE loc, Type *type) {
+    Type *t;
+    struct ArrayType *array;
+
+    array = safe_malloc(sizeof(*array));
+    *array = (struct ArrayType){
         type
     };
+    t = safe_malloc(sizeof(*t));
+    *t = (Type){
+        TYPE_ARRAY, NULL, 0, 0, loc, .array=array
+    };
     return t;
 }
 
 Type *
-new_MaybeType(const YYLTYPE *loc, Type *type) {
+new_MaybeType(YYLTYPE loc, Type *type) {
     Type *t;
+    struct MaybeType *maybe;
 
+    maybe = safe_malloc(sizeof(*maybe));
+    *maybe = (struct MaybeType){
+        type
+    };
     t = safe_malloc(sizeof(*t));
     *t = (Type){
-        TYPE_MAYBE, NULL, 0, *loc, { { 0 } }
-    };
-    t->maybe = (struct MaybeType){
-        type
+        TYPE_MAYBE, NULL, 0, 0, loc, .maybe=maybe
     };
     return t;
 }

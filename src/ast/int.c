@@ -7,52 +7,53 @@
 typedef struct ASTInt ASTInt;
 
 struct ASTInt {
-    void (*json)(const ASTInt *this, FILE *out, int indent);
-    int (*getType)(ASTInt *this, UNUSED TypeCheckState *state, Type **typeptr);
-    void (*delete)(ASTInt *this);
-    struct YYLTYPE loc;
+    AST super;
     long long int val;
     Type *type;
 };
 
 static void
-json(const ASTInt *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTInt *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("int", out, indent);
     json_comma(out, indent);
     json_label("val", out);
-    json_int(this->val, out, indent);
+    json_int(ast->val, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTInt *this, TypeCheckState *state, Type **typeptr) {
+getType(void *this, TypeCheckState *state, Type **typeptr) {
+    ASTInt *ast = this;
     char *msg;
-    if (TypeVerify(this->type, state, &msg)) {
-        print_code_error(stderr, this->loc, msg);
+    if (TypeVerify(ast->type, state, &msg)) {
+        print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
     }
-    *typeptr = this->type;
+    *typeptr = ast->type;
     return 0;
 }
 
 static void
-delete(ASTInt *this) {
-    delete_type(this->type);
+delete(void *this) {
+    ASTInt *ast = this;
+    delete_type(ast->type);
     free(this);
 }
 
 AST *
-new_ASTInt(struct YYLTYPE *loc, long long int val) {
+new_ASTInt(YYLTYPE loc, long long int val) {
     ASTInt *node = NULL;
     Type *type;
 
     type = new_ObjectType(loc, safe_strdup("int"), Vector());
+    setInit(type, 1);
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
-        json, getType, delete, *loc, val, type
+        { json, getType, delete, loc }, val, type
     };
     return (AST *)node;
 }

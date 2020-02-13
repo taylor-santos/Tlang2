@@ -10,12 +10,7 @@
 typedef struct ASTClass ASTClass;
 
 struct ASTClass {
-    void (*json)(const ASTClass *this, FILE *out, int indent);
-    int (*getType)(ASTClass *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTClass *this);
-    struct YYLTYPE loc;
+    AST super;
     Vector *generics; // Vector<char*>
     Vector *supers;   // Vector<Type*>
     Vector *cons;     // Vector<Vector<Type*>>
@@ -29,22 +24,23 @@ json_constructor(Vector *cons, FILE *out, int indent) {
 }
 
 static void
-json(const ASTClass *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTClass *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("class", out, indent);
     json_comma(out, indent);
     json_label("generics", out);
-    json_vector(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->generics, (JSON_MAP_TYPE)json_string, out, indent);
     json_comma(out, indent);
     json_label("supers", out);
-    json_vector(this->supers, (JSON_MAP_TYPE)json_type, out, indent);
+    json_vector(ast->supers, (JSON_MAP_TYPE)json_type, out, indent);
     json_comma(out, indent);
     json_label("constructors", out);
-    json_vector(this->cons, (JSON_MAP_TYPE)json_constructor, out, indent);
+    json_vector(ast->cons, (JSON_MAP_TYPE)json_constructor, out, indent);
     json_comma(out, indent);
     json_label("fields", out);
-    json_vector(this->fields, (JSON_MAP_TYPE)json_field, out, indent);
+    json_vector(ast->fields, (JSON_MAP_TYPE)json_field, out, indent);
     json_end(out, &indent);
 }
 
@@ -64,16 +60,17 @@ cons_compare(const Vector **cons1, const Vector **cons2) {
 }
 
 static int
-getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
+getType(void *this, TypeCheckState *state, Type **typeptr) {
+    ASTClass *ast = this;
     size_t ngen, nsupers, ncons, nfields;
     Vector *constructors;
     Map *fields;
     int status = 0;
 
-    ngen = Vector_size(this->generics);
-    nsupers = Vector_size(this->supers);
-    ncons = Vector_size(this->cons);
-    nfields = Vector_size(this->fields);
+    ngen = Vector_size(ast->generics);
+    nsupers = Vector_size(ast->supers);
+    ncons = Vector_size(ast->cons);
+    nfields = Vector_size(ast->fields);
     if (ngen > 0) {
         print_warning("class generics not implemented\n");
     }
@@ -81,7 +78,7 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
         print_warning("class inheritance not yet implemented\n");
     }
     for (size_t i = 0; i < ncons; i++) {
-        Vector *con = Vector_get(this->cons, i);
+        Vector *con = Vector_get(ast->cons, i);
         size_t nargs = Vector_size(con);
         for (size_t j = 0; j < nargs; j++) {
             Type *argType = Vector_get(con, j);
@@ -93,11 +90,11 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
             }
         }
     }
-    constructors = copy_Vector(this->cons, (VEC_COPY_FUNC)copy_cons);
+    constructors = copy_Vector(ast->cons, (VEC_COPY_FUNC)copy_cons);
     sort_Vector(constructors, (VEC_COMPARATOR)cons_compare);
     fields = Map();
     for (size_t i = 0; i < nfields; i++) {
-        struct Field *field = Vector_get(this->fields, i);
+        struct Field *field = Vector_get(ast->fields, i);
         char *msg;
         if (TypeVerify(field->type, state, &msg)) {
             print_code_error(stderr, typeLoc(field->type), msg);
@@ -111,7 +108,7 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
             size_t len = strlen(name);
             if (!Map_get(fields, name, len, NULL)) {
                 print_code_error(stderr,
-                    this->loc,
+                    ast->super.loc,
                     "duplicate field \"%s\"",
                     name);
                 status = 1;
@@ -126,25 +123,28 @@ getType(ASTClass *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
         delete_Map(fields, (MAP_DELETE_FUNC)delete_type);
         return 1;
     }
-    *typeptr = this->type =
-        ClassType(&this->loc, Vector(), Vector(), constructors, fields);
+    *typeptr = ast->type =
+        ClassType(ast->super.loc, Vector(), Vector(), constructors, fields);
+    const struct ClassType *class = getTypeData(ast->type);
+    Vector_append(state->classes, (void *)class);
     return 0;
 }
 
 static void
-delete(ASTClass *this) {
-    delete_Vector(this->generics, free);
-    delete_Vector(this->supers, (VEC_DELETE_FUNC)delete_type);
-    delete_Vector(this->fields, (VEC_DELETE_FUNC)delete_field);
-    delete_Vector(this->cons, (VEC_DELETE_FUNC)delete_cons);
-    if (NULL != this->type) {
-        delete_type(this->type);
+delete(void *this) {
+    ASTClass *ast = this;
+    delete_Vector(ast->generics, free);
+    delete_Vector(ast->supers, (VEC_DELETE_FUNC)delete_type);
+    delete_Vector(ast->fields, (VEC_DELETE_FUNC)delete_field);
+    delete_Vector(ast->cons, (VEC_DELETE_FUNC)delete_cons);
+    if (NULL != ast->type) {
+        delete_type(ast->type);
     }
     free(this);
 }
 
 AST *
-new_ASTClass(struct YYLTYPE *loc,
+new_ASTClass(YYLTYPE loc,
     Vector *generics,
     Vector *inherits,
     struct ClassBody *body) {
@@ -152,15 +152,9 @@ new_ASTClass(struct YYLTYPE *loc,
 
     class = safe_malloc(sizeof(*class));
     *class = (ASTClass){
-        json,
-        getType,
-        delete,
-        *loc,
-        generics,
-        inherits,
-        body->constructors,
-        body->fields,
-        NULL
+        {
+            json, getType, delete, loc
+        }, generics, inherits, body->constructors, body->fields, NULL
     };
     free(body);
     return (AST *)class;

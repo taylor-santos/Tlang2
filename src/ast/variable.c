@@ -8,40 +8,37 @@
 typedef struct ASTVariable ASTVariable;
 
 struct ASTVariable {
-    void (*json)(const ASTVariable *this, FILE *out, int indent);
-    int (*getType)(ASTVariable *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTVariable *this);
-    struct YYLTYPE loc;
+    AST super;
     char *name;
 };
 
 static void
-json(const ASTVariable *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTVariable *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("variable", out, indent);
     json_comma(out, indent);
     json_label("name", out);
-    json_string(this->name, out, indent);
+    json_string(ast->name, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTVariable *this, TypeCheckState *state, Type **typeptr) {
+getType(void *this, TypeCheckState *state, Type **typeptr) {
+    ASTVariable *ast = this;
     Type *type = NULL;
-    if (Map_get(state->symbols, this->name, strlen(this->name), &type)) {
+    if (Map_get(state->symbols, ast->name, strlen(ast->name), &type)) {
         print_code_error(stderr,
-            this->loc,
+            ast->super.loc,
             "unknown variable \"%s\"",
-            this->name);
+            ast->name);
         return 1;
     } else if (!isInit(type)) {
         print_code_error(stderr,
-            this->loc,
+            ast->super.loc,
             "variable \"%s\" used before initialization",
-            this->name);
+            ast->name);
         return 1;
     }
     *typeptr = type;
@@ -49,18 +46,19 @@ getType(ASTVariable *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static void
-delete(ASTVariable *this) {
-    free(this->name);
+delete(void *this) {
+    ASTVariable *ast = this;
+    free(ast->name);
     free(this);
 }
 
 AST *
-new_ASTVariable(struct YYLTYPE *loc, char *name) {
+new_ASTVariable(YYLTYPE loc, char *name) {
     ASTVariable *variable = NULL;
 
     variable = safe_malloc(sizeof(*variable));
     *variable = (ASTVariable){
-        json, getType, delete, *loc, name
+        { json, getType, delete, loc }, name
     };
     return (AST *)variable;
 }

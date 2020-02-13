@@ -43,11 +43,11 @@ impl Foo {
         x := 0;
         y := "Foo";
     };
-};
+}
 
 a, b, t := *(1, 2, (4, 5, 6));
-
 */
+
 /*
 list: []int;
 
@@ -83,11 +83,33 @@ bar := new Bar();
 
 a := fn(bar);
 */
-list := new int[10];
 
-a := list[5];
-fn := func(x: int) => int {
-    return 5;
+Foo := class {
+    a: int;
+    x: int;
 };
 
-fn(a);
+Bar := class {
+    a: int;
+    y: int;
+};
+
+A := class {
+    a: int;
+};
+
+fn := func(a: A) => int {
+    return a.a;
+};
+
+main := func(b: bool) => int {
+    if (b) {
+        a := new Foo();
+        fn(a);
+    } else {
+        a := new Bar();
+        fn(a);
+    }
+    fn(a);
+    return 0;
+};

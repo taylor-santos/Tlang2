@@ -7,55 +7,55 @@
 typedef struct ASTImpl ASTImpl;
 
 struct ASTImpl {
-    void (*json)(const ASTImpl *this, FILE *out, int indent);
-    int (*getType)(ASTImpl *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTImpl *this);
-    struct YYLTYPE loc;
+    AST super;
     char *name;
     Vector *generics; // Vector<char*>
     Vector *stmts;    // Vector<AST*>
 };
 
 static void
-json(const ASTImpl *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTImpl *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("impl", out, indent);
     json_comma(out, indent);
     json_label("name", out);
-    json_string(this->name, out, indent);
+    json_string(ast->name, out, indent);
     json_comma(out, indent);
     json_label("generics", out);
-    json_vector(this->generics, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->generics, (JSON_MAP_TYPE)json_string, out, indent);
     json_comma(out, indent);
     json_label("statements", out);
-    json_vector(this->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTImpl *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(stderr, this->loc, "impl type checker not implemented");
+getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
+    ASTImpl *ast = this;
+    print_code_error(stderr,
+        ast->super.loc,
+        "impl type checker not implemented");
     return 1;
 }
 
 static void
-delete(ASTImpl *this) {
-    free(this->name);
-    delete_Vector(this->generics, free);
-    delete_Vector(this->stmts, (VEC_DELETE_FUNC)delete_AST);
+delete(void *this) {
+    ASTImpl *ast = this;
+    free(ast->name);
+    delete_Vector(ast->generics, free);
+    delete_Vector(ast->stmts, (VEC_DELETE_FUNC)delete_AST);
     free(this);
 }
 
 AST *
-new_ASTImpl(struct YYLTYPE *loc, char *name, Vector *generics, Vector *stmts) {
+new_ASTImpl(YYLTYPE loc, char *name, Vector *generics, Vector *stmts) {
     ASTImpl *impl = NULL;
 
     impl = safe_malloc(sizeof(*impl));
     *impl = (ASTImpl){
-        json, getType, delete, *loc, name, generics, stmts
+        { json, getType, delete, loc }, name, generics, stmts
     };
     return (AST *)impl;
 }

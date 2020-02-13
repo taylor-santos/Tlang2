@@ -8,7 +8,7 @@ struct dstring {
     size_t size;
 };
 
-dstring *
+dstring
 new_dstring(const char *str);
 
 void
@@ -18,6 +18,9 @@ void
 append_str(dstring *str, const char *s);
 
 void
-delete_dstring(dstring *str);
+append_vstr(dstring *str, const char *fmt, ...);
+
+void
+delete_dstring(dstring str);
 
 #endif

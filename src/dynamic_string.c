@@ -1,19 +1,17 @@
 #include <stddef.h>
 #include <string.h>
+#include <stdarg.h>
 #include "safe.h"
 #include "dynamic_string.h"
 
-dstring *
+dstring
 new_dstring(const char *str) {
-    dstring *ret;
     size_t size;
 
-    ret = safe_malloc(sizeof(*ret));
     size = strlen(str) + 1;
-    *ret = (dstring){
+    return (dstring){
         safe_strdup(str), size
     };
-    return ret;
 }
 
 void
@@ -34,7 +32,21 @@ append_str(dstring *str, const char *s) {
 }
 
 void
-delete_dstring(dstring *str) {
-    free(str->str);
-    free(str);
+append_vstr(dstring *str, const char *fmt, ...) {
+    size_t size;
+    va_list args;
+
+    va_start(args, fmt);
+    size = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+    str->str = safe_realloc(str->str, str->size + size);
+    va_start(args, fmt);
+    vsprintf(str->str + str->size - 1, fmt, args);
+    va_end(args);
+    str->size += size;
+}
+
+void
+delete_dstring(dstring str) {
+    free(str.str);
 }

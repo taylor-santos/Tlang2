@@ -8,12 +8,7 @@
 typedef struct ASTDefinition ASTDefinition;
 
 struct ASTDefinition {
-    void (*json)(const ASTDefinition *this, FILE *out, int indent);
-    int (*getType)(ASTDefinition *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTDefinition *this);
-    struct YYLTYPE loc;
+    AST super;
     Vector *vars;  // Vector<char* | NULL>: NULL indicates ignored variables
     AST *expr;
 };
@@ -28,39 +23,43 @@ json_underscore(const char *str, FILE *out, int indent) {
 }
 
 static void
-json(const ASTDefinition *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTDefinition *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("definition", out, indent);
     json_comma(out, indent);
     json_label("variables", out);
-    json_vector(this->vars, (JSON_MAP_TYPE)json_underscore, out, indent);
+    json_vector(ast->vars, (JSON_MAP_TYPE)json_underscore, out, indent);
     json_comma(out, indent);
     json_label("expr", out);
-    json_AST(this->expr, out, indent);
+    json_AST(ast->expr, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
+getType(void *this, TypeCheckState *state, Type **typeptr) {
+    ASTDefinition *ast = this;
     Type *expr_type = NULL;
     int status = 0;
     size_t nvars;
 
-    if (getType_AST(this->expr, state, &expr_type)) {
+    if (ast->expr->getType(ast->expr, state, &expr_type)) {
         return 1;
     }
     if (expr_type == NULL) {
-        print_code_error(stderr, this->loc, "assigning to variable from none");
+        print_code_error(stderr,
+            ast->super.loc,
+            "assigning to variable from none");
         return 1;
     }
-    nvars = Vector_size(this->vars);
+    nvars = Vector_size(ast->vars);
     if (typeOf(expr_type) == TYPE_SPREAD) {
         const struct SpreadType *spread = getTypeData(expr_type);
         size_t nspread = SparseVector_count(spread->types);
         if (nvars != nspread) {
             print_code_error(stderr,
-                getLoc_AST(this->expr),
+                ast->expr->loc,
                 "assignment to %d variable%s from %d tuple value%s",
                 nvars,
                 nvars == 1
@@ -79,7 +78,7 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
             Type *type = NULL;
             SparseVector_get(spread->types, i, &type, &count);
             for (unsigned long long j = 0; j < count; j++) {
-                char *name = Vector_get(this->vars, var_index);
+                char *name = Vector_get(ast->vars, var_index);
                 size_t len = strlen(name);
                 Type *prev_type = NULL;
                 if (!Map_get(state->symbols, name, len, &prev_type)) {
@@ -87,7 +86,7 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
                         char *oldTypeName = typeToString(prev_type);
                         char *newTypeName = typeToString(type);
                         print_code_error(stderr,
-                            this->loc,
+                            ast->super.loc,
                             "redefinition of variable \"%s\" from type "
                             "\"%s\" to type \"%s\"",
                             name,
@@ -103,6 +102,10 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
                     Type *type_copy = copy_type(type);
                     setInit(type_copy, 1);
                     Map_put(state->symbols, name, len, type_copy, NULL);
+                    if (NULL != state->newSymbols) {
+                        type_copy = copy_type(expr_type);
+                        Map_put(state->newSymbols, name, len, type_copy, NULL);
+                    }
                 }
                 var_index++;
             }
@@ -112,7 +115,7 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
     }
     // Right-hand expression is not a spread tuple
     for (size_t i = 0; i < nvars; i++) {
-        char *name = Vector_get(this->vars, i);
+        char *name = Vector_get(ast->vars, i);
         if (name != NULL) {
             //Not an ignored variable (_)
             size_t len = strlen(name);
@@ -122,7 +125,7 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
                     char *oldTypeName = typeToString(prev_type);
                     char *newTypeName = typeToString(expr_type);
                     print_code_error(stderr,
-                        this->loc,
+                        ast->super.loc,
                         "redefinition of variable \"%s\" from type "
                         "\"%s\" to type \"%s\"",
                         name,
@@ -138,6 +141,10 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
                 Type *type_copy = copy_type(expr_type);
                 setInit(type_copy, 1);
                 Map_put(state->symbols, name, len, type_copy, NULL);
+                if (NULL != state->newSymbols) {
+                    type_copy = copy_type(expr_type);
+                    Map_put(state->newSymbols, name, len, type_copy, NULL);
+                }
             }
         }
     }
@@ -146,19 +153,20 @@ getType(ASTDefinition *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static void
-delete(ASTDefinition *this) {
-    delete_Vector(this->vars, free);
-    delete_AST(this->expr);
+delete(void *this) {
+    ASTDefinition *ast = this;
+    delete_Vector(ast->vars, free);
+    delete_AST(ast->expr);
     free(this);
 }
 
 AST *
-new_ASTDefinition(struct YYLTYPE *loc, Vector *vars, AST *expr) {
+new_ASTDefinition(YYLTYPE loc, Vector *vars, AST *expr) {
     ASTDefinition *definition = NULL;
 
     definition = safe_malloc(sizeof(*definition));
     *definition = (ASTDefinition){
-        json, getType, delete, *loc, vars, expr
+        { json, getType, delete, loc }, vars, expr
     };
     return (AST *)definition;
 }

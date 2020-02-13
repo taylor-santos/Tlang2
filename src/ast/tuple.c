@@ -8,42 +8,39 @@
 typedef struct ASTTuple ASTTuple;
 
 struct ASTTuple {
-    void (*json)(const ASTTuple *this, FILE *out, int indent);
-    int (*getType)(ASTTuple *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTTuple *this);
-    struct YYLTYPE loc;
+    AST super;
     Vector *exprs; // Vector<AST*>
     Type *type;    // NULL until type checker is executed.
 };
 
 static void
-json(const ASTTuple *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTTuple *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("tuple", out, indent);
     json_comma(out, indent);
     json_label("elements", out);
-    json_vector(this->exprs, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->exprs, (JSON_MAP_TYPE)json_AST, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
+getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
+    ASTTuple *ast = this;
     SparseVector *types;
     size_t n;
     int status = 0;
 
-    n = Vector_size(this->exprs);
+    n = Vector_size(ast->exprs);
     if (1 == n) {
         //Tuple has single value, flatten it:
         Type *type;
-        AST *expr = Vector_get(this->exprs, 0);
-        if (getType_AST(expr, state, &type)) {
+        AST *expr = Vector_get(ast->exprs, 0);
+        if (expr->getType(expr, state, &type)) {
             return 1;
         }
-        *typeptr = this->type = copy_type(type);
+        *typeptr = ast->type = copy_type(type);
         return 0;
     }
     //Tuple has multiple values:
@@ -51,8 +48,8 @@ getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
     for (size_t i = 0; i < n; i++) {
         Type *type, *type_copy;
 
-        AST *expr = Vector_get(this->exprs, i);
-        if (getType_AST(expr, state, &type)) {
+        AST *expr = Vector_get(ast->exprs, i);
+        if (expr->getType(expr, state, &type)) {
             status = 1;
         } else {
             type_copy = copy_type(type);
@@ -60,27 +57,28 @@ getType(ASTTuple *this, UNUSED TypeCheckState *state, Type **typeptr) {
         }
     }
     if (0 == status) {
-        *typeptr = this->type = TupleType(&this->loc, types);
+        *typeptr = ast->type = TupleType(ast->super.loc, types);
     }
     return status;
 }
 
 static void
-delete(ASTTuple *this) {
-    delete_Vector(this->exprs, (VEC_DELETE_FUNC)delete_AST);
-    if (NULL != this->type) {
-        delete_type(this->type);
+delete(void *this) {
+    ASTTuple *ast = this;
+    delete_Vector(ast->exprs, (VEC_DELETE_FUNC)delete_AST);
+    if (NULL != ast->type) {
+        delete_type(ast->type);
     }
     free(this);
 }
 
 AST *
-new_ASTTuple(struct YYLTYPE *loc, Vector *exprs) {
+new_ASTTuple(YYLTYPE loc, Vector *exprs) {
     ASTTuple *tuple = NULL;
 
     tuple = safe_malloc(sizeof(*tuple));
     *tuple = (ASTTuple){
-        json, getType, delete, *loc, exprs, NULL
+        { json, getType, delete, loc }, exprs, NULL
     };
     return (AST *)tuple;
 }

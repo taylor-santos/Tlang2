@@ -7,23 +7,20 @@
 typedef struct ASTBool ASTBool;
 
 struct ASTBool {
-    void (*json)(const ASTBool *this, FILE *out, int indent);
-    int (*getType)(ASTBool *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTBool *this);
-    struct YYLTYPE loc;
+    AST super;
     int val;
+    Type *type;
 };
 
 static void
-json(const ASTBool *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTBool *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("bool", out, indent);
     json_comma(out, indent);
     json_label("val", out);
-    if (this->val) {
+    if (ast->val) {
         json_string("true", out, indent);
     } else {
         json_string("false", out, indent);
@@ -32,23 +29,35 @@ json(const ASTBool *this, FILE *out, int indent) {
 }
 
 static int
-getType(ASTBool *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    print_code_error(stderr, this->loc, "bool type checker not implemented");
-    return 1;
+getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
+    ASTBool *ast = this;
+    char *msg;
+    if (TypeVerify(ast->type, state, &msg)) {
+        print_code_error(stderr, ast->super.loc, msg);
+        free(msg);
+        return 1;
+    }
+    *typeptr = ast->type;
+    return 0;
 }
 
 static void
-delete(ASTBool *this) {
-    free(this);
+delete(void *this) {
+    ASTBool *ast = this;
+    delete_type(ast->type);
+    free(ast);
 }
 
 AST *
-new_ASTBool(struct YYLTYPE *loc, int val) {
+new_ASTBool(YYLTYPE loc, int val) {
     ASTBool *node = NULL;
+    Type *type;
 
+    type = new_ObjectType(loc, safe_strdup("bool"), Vector());
+    setInit(type, 1);
     node = safe_malloc(sizeof(*node));
     *node = (ASTBool){
-        json, getType, delete, *loc, val
+        { json, getType, delete, loc }, val, type
     };
     return (AST *)node;
 }

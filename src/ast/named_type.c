@@ -8,54 +8,50 @@
 typedef struct ASTNamedType ASTNamedType;
 
 struct ASTNamedType {
-    void (*json)(const ASTNamedType *this, FILE *out, int indent);
-    int (*getType)(ASTNamedType *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTNamedType *this);
-    struct YYLTYPE loc;
+    AST super;
     Vector *names; // Vector<char*> (can be empty for unnamed arguments)
     Type *type;
 };
 
 static void
-json(const ASTNamedType *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTNamedType *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("named type", out, indent);
     json_comma(out, indent);
     json_label("names", out);
-    json_vector(this->names, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->names, (JSON_MAP_TYPE)json_string, out, indent);
     json_comma(out, indent);
     json_label("type", out);
-    json_type(this->type, out, indent);
+    json_type(ast->type, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTNamedType *this,
-    UNUSED TypeCheckState *state,
-    UNUSED Type **typeptr) {
+getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
+    ASTNamedType *ast = this;
     print_code_error(stderr,
-        this->loc,
+        ast->super.loc,
         "named_type type checker not implemented");
     return 1;
 }
 
 static void
-delete(ASTNamedType *this) {
-    delete_Vector(this->names, (VEC_DELETE_FUNC)free);
-    delete_type(this->type);
+delete(void *this) {
+    ASTNamedType *ast = this;
+    delete_Vector(ast->names, (VEC_DELETE_FUNC)free);
+    delete_type(ast->type);
     free(this);
 }
 
 AST *
-new_ASTNamedType(struct YYLTYPE *loc, Vector *names, Type *type) {
+new_ASTNamedType(YYLTYPE loc, Vector *names, Type *type) {
     ASTNamedType *named_type = NULL;
 
     named_type = safe_malloc(sizeof(*named_type));
     *named_type = (ASTNamedType){
-        json, getType, delete, *loc, names, type
+        { json, getType, delete, loc }, names, type
     };
     return (AST *)named_type;
 }

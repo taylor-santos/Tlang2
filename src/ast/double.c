@@ -7,48 +7,53 @@
 typedef struct ASTDouble ASTDouble;
 
 struct ASTDouble {
-    void (*json)(const ASTDouble *this, FILE *out, int indent);
-    int (*getType)(ASTDouble *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTDouble *this);
-    struct YYLTYPE loc;
+    AST super;
     double val;
     Type *type;
 };
 
 static void
-json(const ASTDouble *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTDouble *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("double", out, indent);
     json_comma(out, indent);
     json_label("val", out);
-    json_double(this->val, out, indent);
+    json_double(ast->val, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTDouble *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
-    *typeptr = this->type;
+getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
+    ASTDouble *ast = this;
+    char *msg;
+    if (TypeVerify(ast->type, state, &msg)) {
+        print_code_error(stderr, ast->super.loc, msg);
+        free(msg);
+        return 1;
+    }
+    *typeptr = ast->type;
     return 0;
 }
 
 static void
-delete(ASTDouble *this) {
-    delete_type(this->type);
+delete(void *this) {
+    ASTDouble *ast = this;
+    delete_type(ast->type);
     free(this);
 }
 
 AST *
-new_ASTDouble(struct YYLTYPE *loc, double val) {
+new_ASTDouble(YYLTYPE loc, double val) {
     ASTDouble *node = NULL;
     Type *type;
 
     type = new_ObjectType(loc, safe_strdup("double"), Vector());
+    setInit(type, 1);
     node = safe_malloc(sizeof(*node));
     *node = (ASTDouble){
-        json, getType, delete, *loc, val, type
+        { json, getType, delete, loc }, val, type
     };
     return (AST *)node;
 }

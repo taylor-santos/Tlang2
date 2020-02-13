@@ -10,54 +10,51 @@
 typedef struct ASTTypeStmt ASTTypeStmt;
 
 struct ASTTypeStmt {
-    void (*json)(const ASTTypeStmt *this, FILE *out, int indent);
-    int (*getType)(ASTTypeStmt *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTTypeStmt *this);
-    struct YYLTYPE loc;
+    AST super;
     Vector *vars; // Vector<char*>
     Type *type;
 };
 
 static void
-json(const ASTTypeStmt *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTTypeStmt *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("type declaration", out, indent);
     json_comma(out, indent);
     json_label("vars", out);
-    json_vector(this->vars, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->vars, (JSON_MAP_TYPE)json_string, out, indent);
     json_comma(out, indent);
     json_label("type", out);
-    json_type(this->type, out, indent);
+    json_type(ast->type, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTTypeStmt *this, TypeCheckState *state, UNUSED Type **typeptr) {
+getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
+    ASTTypeStmt *ast = this;
     int status = 0;
     size_t nvars;
     char *msg;
 
-    if (TypeVerify(this->type, state, &msg)) {
-        print_code_error(stderr, typeLoc(this->type), msg);
+    if (TypeVerify(ast->type, state, &msg)) {
+        print_code_error(stderr, typeLoc(ast->type), msg);
         free(msg);
         return 1;
     }
-    nvars = Vector_size(this->vars);
+    nvars = Vector_size(ast->vars);
     for (size_t i = 0; i < nvars; i++) {
-        char *var = Vector_get(this->vars, i);
+        char *var = Vector_get(ast->vars, i);
         size_t len = strlen(var);
         Type *prev_type = NULL;
         if (!Map_get(state->symbols, var, len, &prev_type)) {
             print_code_error(stderr,
-                this->loc,
+                ast->super.loc,
                 "redefinition of variable \"%s\"",
                 var);
             status = 1;
         } else {
-            Type *type_copy = copy_type(this->type);
+            Type *type_copy = copy_type(ast->type);
             Map_put(state->symbols, var, len, type_copy, NULL);
         }
     }
@@ -65,19 +62,20 @@ getType(ASTTypeStmt *this, TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static void
-delete(ASTTypeStmt *this) {
-    delete_Vector(this->vars, free);
-    delete_type(this->type);
+delete(void *this) {
+    ASTTypeStmt *ast = this;
+    delete_Vector(ast->vars, free);
+    delete_type(ast->type);
     free(this);
 }
 
 AST *
-new_ASTTypeStmt(struct YYLTYPE *loc, Vector *vars, Type *type) {
+new_ASTTypeStmt(YYLTYPE loc, Vector *vars, Type *type) {
     ASTTypeStmt *named_type = NULL;
 
     named_type = safe_malloc(sizeof(*named_type));
     *named_type = (ASTTypeStmt){
-        json, getType, delete, *loc, vars, type
+        { json, getType, delete, loc }, vars, type
     };
     return (AST *)named_type;
 }

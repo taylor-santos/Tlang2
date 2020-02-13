@@ -8,49 +8,54 @@
 typedef struct ASTString ASTString;
 
 struct ASTString {
-    void (*json)(const ASTString *this, FILE *out, int indent);
-    int (*getType)(ASTString *this,
-        UNUSED TypeCheckState *state,
-        Type **typeptr);
-    void (*delete)(ASTString *this);
-    struct YYLTYPE loc;
-    dstring *str;
+    AST super;
+    dstring str;
     Type *type;
 };
 
 static void
-json(const ASTString *this, FILE *out, int indent) {
+json(const void *this, FILE *out, int indent) {
+    const ASTString *ast = this;
     json_start(out, &indent);
     json_label("node", out);
     json_string("string", out, indent);
     json_comma(out, indent);
     json_label("val", out);
-    json_dstring(this->str, out, indent);
+    json_dstring(&ast->str, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(ASTString *this, UNUSED TypeCheckState *state, Type **typeptr) {
-    *typeptr = this->type;
+getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
+    ASTString *ast = this;
+    char *msg;
+    if (TypeVerify(ast->type, state, &msg)) {
+        print_code_error(stderr, ast->super.loc, msg);
+        free(msg);
+        return 1;
+    }
+    *typeptr = ast->type;
     return 0;
 }
 
 static void
-delete(ASTString *this) {
-    delete_dstring(this->str);
-    delete_type(this->type);
+delete(void *this) {
+    ASTString *ast = this;
+    delete_dstring(ast->str);
+    delete_type(ast->type);
     free(this);
 }
 
 AST *
-new_ASTString(struct YYLTYPE *loc, dstring *str) {
+new_ASTString(YYLTYPE loc, dstring str) {
     ASTString *node = NULL;
     Type *type;
 
     type = ObjectType(loc, safe_strdup("string"), Vector());
+    setInit(type, 1);
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
-        json, getType, delete, *loc, str, type
+        { json, getType, delete, loc }, str, type
     };
     return (AST *)node;
 }

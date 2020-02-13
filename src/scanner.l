@@ -23,7 +23,7 @@
         yyscan_t scanner,
         const char *msg);
 
-    static dstring *str;
+    static dstring str;
     static YYLTYPE str_begin;
 
     enum yytokentype parse_int(const char *str,
@@ -131,28 +131,28 @@
         return T_ERROR;
     }
     \\n {
-        append_char(str, '\n');
+        append_char(&str, '\n');
     }
     \\r {
-        append_char(str, '\r');
+        append_char(&str, '\r');
     }
     \\b {
-        append_char(str, '\b');
+        append_char(&str, '\b');
     }
     \\t {
-        append_char(str, '\t');
+        append_char(&str, '\t');
     }
     \\a {
-        append_char(str, '\a');
+        append_char(&str, '\a');
     }
     \\v {
-        append_char(str, '\v');
+        append_char(&str, '\v');
     }
     \\f {
-        append_char(str, '\f');
+        append_char(&str, '\f');
     }
     \\\\ {
-        append_char(str, '\\');
+        append_char(&str, '\\');
     }
     \\[0-7]{1,3} {
         unsigned int result;
@@ -161,13 +161,13 @@
             yyerror(yylloc, 0, 0, 0, "invalid octal escape sequence");
             return T_ERROR;
         }
-        append_char(str, (char)result);
+        append_char(&str, (char)result);
     }
     [^\\"\n\r]+ {
-        append_str(str, yytext);
+        append_str(&str, yytext);
     }
     \\[\n\r]+ {
-        append_str(str, yytext);
+        append_str(&str, yytext);
     }
     \\. {
         yyerror(yylloc, 0, 0, 0, "invalid escape sequence");
@@ -194,6 +194,12 @@ friend { return T_FRIEND; }
 true   { return T_TRUE; }
 false  { return T_FALSE; }
 maybe  { return T_MAYBE; }
+if     { return T_IF; }
+else   { return T_ELSE; }
+is     { return T_IS; }
+not    { return T_NOT; }
+switch { return T_SWITCH; }
+case   { return T_CASE; }
 [:][=] { return T_DEF; }
 [=][>] { return T_ARROW; }
 [*][=] { return T_MUL_ASSIGN; }
@@ -251,11 +257,14 @@ nan {
     yylval->str = safe_strdup(yytext);
     return T_IDENT;
 }
-[;{}<>:()[\]*/+\-%.,=\_]  {
+[;{}<>:()[\]*/+\-%.,=_!]  {
     return *yytext;
 }
 
 . {
+    char msg[] = "unrecognized symbol \' \'";
+    sprintf(msg, "unrecognized symbol \'%c\'", *yytext);
+    yyerror(yylloc, NULL, filename, NULL, msg);
     return T_ERROR;
 }
 

@@ -2,14 +2,13 @@
 #define TYPES_H
 
 #include <stdio.h>
+#include "ast.h"
 
 typedef struct Type Type;
 struct Type;
 struct Vector;
 struct SparseVector;
-struct AST;
 struct Map;
-struct YYLTYPE;
 
 typedef enum Types {
     TYPE_FUNC,
@@ -48,7 +47,7 @@ struct ObjectType {
 };
 
 struct ExprType {
-    struct AST *expr;
+    AST *expr;
     struct Vector *generics; // Vector<char*>
     int ownsAST;
 };
@@ -74,13 +73,20 @@ struct MaybeType {
     Type *type;
 };
 
+enum {
+    BUILTIN_INT, BUILTIN_BOOL, BUILTIN_DOUBLE, BUILTIN_STRING
+} Builtins;
+#define NUM_BUILTINS 4
+
 typedef struct TypeCheckState {
-    struct Map *symbols; // Map<char*, Type*>
-    // Map class names to their implementations. Each time a class name is
-    // seen it gets added to the map with NULL as the AST. Each time an impl
-    // is seen, add its AST to the map. At the end of type checking, check
-    // that all classes have implementations.
-    struct Map *classes; // Map<char*, AST*>
+    struct Map *symbols;    // Map<char*, Type*>
+    // Used inside control flow statements to add newly defined symbols to
+    // the outer scope if they are defined in all code paths. Defaults to
+    // NULL and allocation and destruction must be handled by the control
+    // flow AST node.
+    struct Map *newSymbols; // Map<char*, Type*>
+    struct Vector *classes; // Vector<const struct ClassType*>
+    const struct ClassType *builtins[NUM_BUILTINS];
     // NULL if not in function, otherwise return type of current function
     Type *funcType;
     // NULL initially, gets set by return statements. Used to tell if there are
@@ -102,6 +108,9 @@ void
 delete_type(Type *type);
 
 void
+delete_ClassType(struct ClassType *class);
+
+void
 setTypeQualifiers(Type *type, struct Vector *qualifiers);
 
 int
@@ -113,7 +122,7 @@ TypeVerify(Type *type, const TypeCheckState *state, char **msg);
 Types
 typeOf(const Type *type);
 
-struct YYLTYPE
+YYLTYPE
 typeLoc(const Type *type);
 
 unsigned char
@@ -128,10 +137,17 @@ getTypeData(Type *type);
 char *
 typeToString(const Type *type);
 
+int
+TypeIntersection(const Type *type1,
+    const Type *type2,
+    const TypeCheckState *state,
+    YYLTYPE loc,
+    Type **typeptr);
+
 #define FuncType(loc, gen, args, ret) \
     new_FuncType(loc, gen, args, ret)
 Type *
-new_FuncType(const struct YYLTYPE *loc,
+new_FuncType(YYLTYPE loc,
     struct Vector *generics,
     struct Vector *args,
     Type *ret_type);
@@ -139,7 +155,7 @@ new_FuncType(const struct YYLTYPE *loc,
 #define ClassType(loc, gen, sup, cons, fields) \
     new_ClassType(loc, gen, sup, cons, fields)
 Type *
-new_ClassType(const struct YYLTYPE *loc,
+new_ClassType(YYLTYPE loc,
     struct Vector *generics,
     struct Vector *supers,
     struct Vector *cons,
@@ -148,19 +164,17 @@ new_ClassType(const struct YYLTYPE *loc,
 #define ObjectType(loc, name, gen) \
     new_ObjectType(loc, name, gen)
 Type *
-new_ObjectType(const struct YYLTYPE *loc, char *name, struct Vector *generics);
+new_ObjectType(YYLTYPE loc, char *name, struct Vector *generics);
 
 #define ExprType(loc, expr, gen) \
     new_ExprType(loc, expr, gen)
 Type *
-new_ExprType(const struct YYLTYPE *loc,
-    struct AST *expr,
-    struct Vector *generics);
+new_ExprType(YYLTYPE loc, AST *expr, struct Vector *generics);
 
 #define TupleType(loc, types) \
     new_TupleType(loc, types)
 Type *
-new_TupleType(const struct YYLTYPE *loc, struct SparseVector *types);
+new_TupleType(YYLTYPE loc, struct SparseVector *types);
 
 #define SpreadType(tuple) \
     new_SpreadType(tuple)
@@ -170,21 +184,21 @@ new_SpreadType(Type *tuple);
 #define NamedType(loc, name, type) \
     new_NamedType(loc, name, type)
 Type *
-new_NamedType(const struct YYLTYPE *loc, char *name, Type *type);
+new_NamedType(YYLTYPE loc, char *name, Type *type);
 
 #define NoneType(loc) \
     new_NoneType(loc)
 Type *
-new_NoneType(const struct YYLTYPE *loc);
+new_NoneType(YYLTYPE loc);
 
 #define ArrayType(loc, type) \
     new_ArrayType(loc, type)
 Type *
-new_ArrayType(const struct YYLTYPE *loc, Type *type);
+new_ArrayType(YYLTYPE loc, Type *type);
 
 #define MaybeType(loc, type) \
     new_MaybeType(loc, type)
 Type *
-new_MaybeType(const struct YYLTYPE *loc, Type *type);
+new_MaybeType(YYLTYPE loc, Type *type);
 
 #endif
