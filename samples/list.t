@@ -87,6 +87,7 @@ a := fn(bar);
 Foo := class {
     a: int;
     x: int;
+    operator==(int) => bool;
 };
 
 Bar := class {
@@ -102,17 +103,23 @@ fn := func(a: A) => int {
     return a.a;
 };
 
+fn2 := func() => int {
+    x := 5;
+    while false {
+        return x;
+    }
+    y: int;
+    do {
+        y := 5;
+    } while false;
+    return y;
+};
+
 main := func(b: bool) => int {
-    a: A;
-    if (b) {
-        a := new Foo();
-        fn(a);
-    } else {
-        a := new Bar();
+    c := new Foo();
+    switch c {
+        case 5 {
+        }
     }
-    while (b) {
-        a := new Foo();
-    }
-    fn(a);
     return 0;
 };

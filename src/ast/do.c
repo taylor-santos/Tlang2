@@ -2,46 +2,37 @@
 #include <stdlib.h>
 #include "safe.h"
 #include "json.h"
-#include "vector.h"
 #include "parser.h"
 #include "map.h"
 
-typedef struct ASTIf ASTIf;
+typedef struct ASTDo ASTDo;
 
-struct Vector;
-
-struct ASTIf {
+struct ASTDo {
     AST super;
     AST *cond;
-    Vector *trueStmts;  // Vector<AST*>
-    Vector *falseStmts; // Vector<AST*>
-    // NULL until type checker is executed:
-    Type *type;
-    Map *trueSymbols;
-    Map *falseSymbols;
+    Vector *stmts;  // Vector<AST*>
+    Type *type;     // NULL until type checker is executed.
+    Map *symbols;   // NULL until type checker is executed.
 };
 
 static void
 json(const void *this, FILE *out, int indent) {
-    const ASTIf *ast = this;
+    const ASTDo *ast = this;
     json_start(out, &indent);
     json_label("node", out);
-    json_string("if", out, indent);
+    json_string("do", out, indent);
     json_comma(out, indent);
     json_label("cond", out);
     json_AST(ast->cond, out, indent);
     json_comma(out, indent);
-    json_label("true stmts", out);
-    json_vector(ast->trueStmts, (JSON_MAP_TYPE)json_AST, out, indent);
-    json_comma(out, indent);
-    json_label("false stmts", out);
-    json_vector(ast->falseStmts, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_label("stmts", out);
+    json_vector(ast->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
     json_end(out, &indent);
 }
 
 static int
 getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
-    ASTIf *ast = this;
+    ASTDo *ast = this;
     Type *condType;
     int status = 0;
 
@@ -103,108 +94,65 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         }
     }
     Map *prevSymbols = state->symbols;
-    Map *prevNewInit = state->newInitSymbols;
-    Type *prevRetType = state->retType;
-    size_t nTrue = Vector_size(ast->trueStmts);
-    size_t nFalse = Vector_size(ast->falseStmts);
-    Map *trueNewInit = Map(), *falseNewInit = Map();
-
-    // True Branch
-    if (nTrue != 0) {
-        ast->trueSymbols = copy_Map(prevSymbols, (MAP_COPY_FUNC)copy_type);
-        state->symbols = ast->trueSymbols;
-        state->retType = NULL;
+    Map *prevInit = state->newInitSymbols;
+    Type *prevRet = state->retType;
+    state->retType = NULL;
+    state->newInitSymbols = Map();
+    size_t nstmts = Vector_size(ast->stmts);
+    if (nstmts > 0) {
+        state->symbols = ast->symbols =
+            copy_Map(state->symbols, (MAP_COPY_FUNC)copy_type);
     }
-    state->newInitSymbols = trueNewInit;
-    for (size_t i = 0; i < nTrue; i++) {
-        AST *stmt = Vector_get(ast->trueStmts, i);
+    for (size_t i = 0; i < nstmts; i++) {
+        AST *stmt = Vector_get(ast->stmts, i);
         Type *type;
         if (stmt->getType(stmt, state, &type)) {
             status = 1;
         }
     }
-    Type *trueRetType = state->retType;
-
-    // False Branch
-    if (nFalse != 0) {
-        ast->falseSymbols = copy_Map(prevSymbols, (MAP_COPY_FUNC)copy_type);
-        state->symbols = ast->falseSymbols;
-        state->retType = NULL;
-    }
-    state->newInitSymbols = falseNewInit;
-    for (size_t i = 0; i < nFalse; i++) {
-        AST *stmt = Vector_get(ast->falseStmts, i);
-        Type *type;
-        if (stmt->getType(stmt, state, &type)) {
-            status = 1;
-        }
-    }
-    Type *falseRetType = state->retType;
-
-    if (NULL != prevRetType) {
-        state->retType = prevRetType;
-    } else if (NULL != trueRetType && NULL != falseRetType) {
-        state->retType = trueRetType;
-    } else {
-        state->retType = NULL;
-    }
-    state->newInitSymbols = prevNewInit;
-    state->symbols = prevSymbols;
-
-    Iterator *it = Map_iterator(trueNewInit);
+    Iterator *it = Map_iterator(state->newInitSymbols);
     while (it->hasNext(it)) {
         MapIterData symbol = it->next(it);
-        Type *type;
-        if (!Map_get(state->symbols, symbol.key, symbol.len, &type) &&
-            Map_contains(falseNewInit, symbol.key, symbol.len)) {
+        Type *type = NULL;
+        if (!Map_get(prevSymbols, symbol.key, symbol.len, &type)) {
             setInit(type, 1);
-            if (NULL != state->newInitSymbols) {
-                Map_put(state->newInitSymbols,
-                    symbol.key,
-                    symbol.len,
-                    NULL,
-                    NULL);
+            if (NULL != prevInit) {
+                Map_put(prevInit, symbol.key, symbol.len, NULL, NULL);
             }
         }
     }
     it->delete(it);
-    delete_Map(trueNewInit, NULL);
-    delete_Map(falseNewInit, NULL);
-
+    delete_Map(state->newInitSymbols, NULL);
+    if (NULL != state->retType) {
+        prevRet = state->retType;
+    }
+    state->symbols = prevSymbols;
+    state->newInitSymbols = prevInit;
+    state->retType = prevRet;
     return status;
 }
 
 static void
 delete(void *this) {
-    ASTIf *ast = this;
+    ASTDo *ast = this;
     delete_AST(ast->cond);
-    delete_Vector(ast->trueStmts, (VEC_DELETE_FUNC)delete_AST);
-    delete_Vector(ast->falseStmts, (VEC_DELETE_FUNC)delete_AST);
+    delete_Vector(ast->stmts, (VEC_DELETE_FUNC)delete_AST);
     if (NULL != ast->type) {
         delete_type(ast->type);
     }
-    if (NULL != ast->trueSymbols) {
-        delete_Map(ast->trueSymbols, (MAP_DELETE_FUNC)delete_type);
-    }
-    if (NULL != ast->falseSymbols) {
-        delete_Map(ast->falseSymbols, (MAP_DELETE_FUNC)delete_type);
+    if (NULL != ast->symbols) {
+        delete_Map(ast->symbols, (MAP_DELETE_FUNC)delete_type);
     }
     free(this);
 }
 
 AST *
-new_ASTIf(YYLTYPE loc, AST *cond, Vector *trueStmts, Vector *falseStmts) {
-    ASTIf *node = NULL;
+new_ASTDo(YYLTYPE loc, AST *cond, struct Vector *stmts) {
+    ASTDo *node = NULL;
 
     node = safe_malloc(sizeof(*node));
-    *node = (ASTIf){
-        { json, getType, delete, loc },
-        cond,
-        trueStmts,
-        falseStmts,
-        NULL,
-        NULL,
-        NULL
+    *node = (ASTDo){
+        { json, getType, delete, loc }, cond, stmts, NULL, NULL
     };
     return (AST *)node;
 }

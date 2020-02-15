@@ -36,12 +36,6 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &exprType)) {
         return 1;
     }
-    char *msg;
-    if (TypeVerify(exprType, state, &msg)) {
-        print_code_error(stderr, ast->super.loc, msg);
-        free(msg);
-        return 1;
-    }
     if (TYPE_OBJECT != typeOf(exprType)) {
         char *typeName = typeToString(exprType);
         print_code_error(stderr,

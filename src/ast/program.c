@@ -82,6 +82,22 @@ addBuiltins(Map *symbols, Vector *classes) {
                 fieldType,
                 NULL);
         }
+        {
+            Type *retType =
+                ObjectType(loc, safe_strdup(builtin.name), Vector());
+            Type *argType =
+                ObjectType(loc, safe_strdup(builtin.name), Vector());
+            TypeVerify(retType, &state, NULL);
+            TypeVerify(argType, &state, NULL);
+            Vector *args = init_Vector(argType);
+            Type *fieldType = FuncType(loc, Vector(), args, retType);
+            char *fieldName = "==";
+            Map_put(class->fields,
+                fieldName,
+                strlen(fieldName),
+                fieldType,
+                NULL);
+        }
     }
     return state;
 }

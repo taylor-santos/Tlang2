@@ -95,6 +95,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     }
     Map *prevSymbols = state->symbols;
     Map *prevInit = state->newInitSymbols;
+    Type *prevRet = state->retType;
+    state->retType = NULL;
     state->newInitSymbols = NULL;
     size_t nstmts = Vector_size(ast->stmts);
     if (nstmts > 0) {
@@ -110,6 +112,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     }
     state->symbols = prevSymbols;
     state->newInitSymbols = prevInit;
+    state->retType = prevRet;
     return status;
 }
 

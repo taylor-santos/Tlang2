@@ -184,38 +184,41 @@
     }
 }
 
-class  { return T_CLASS; }
-func   { return T_FUNC; }
-impl   { return T_IMPL; }
-new    { return T_NEW; }
-return { return T_RETURN; }
-const  { return T_CONST; }
-friend { return T_FRIEND; }
-true   { return T_TRUE; }
-false  { return T_FALSE; }
-maybe  { return T_MAYBE; }
-if     { return T_IF; }
-else   { return T_ELSE; }
-while  { return T_WHILE; }
-is     { return T_IS; }
-not    { return T_NOT; }
-switch { return T_SWITCH; }
-case   { return T_CASE; }
-[:][=] { return T_DEF; }
-[=][>] { return T_ARROW; }
-[*][=] { return T_MUL_ASSIGN; }
-[/][=] { return T_DIV_ASSIGN; }
-[%][=] { return T_MOD_ASSIGN; }
-[+][=] { return T_ADD_ASSIGN; }
-[-][=] { return T_SUB_ASSIGN; }
-[|][|] { return T_OR; }
-[&][&] { return T_AND; }
-[=][=] { return T_EQ; }
-[!][=] { return T_NE; }
-[<][=] { return T_LE; }
-[>][=] { return T_GE; }
-[+][+] { return T_INC; }
-[-][-] { return T_DEC; }
+class    { return T_CLASS; }
+func     { return T_FUNC; }
+impl     { return T_IMPL; }
+new      { return T_NEW; }
+return   { return T_RETURN; }
+const    { return T_CONST; }
+friend   { return T_FRIEND; }
+true     { return T_TRUE; }
+false    { return T_FALSE; }
+maybe    { return T_MAYBE; }
+if       { return T_IF; }
+else     { return T_ELSE; }
+while    { return T_WHILE; }
+do       { return T_DO; }
+is       { return T_IS; }
+not      { return T_NOT; }
+switch   { return T_SWITCH; }
+case     { return T_CASE; }
+default  { return T_DEFAULT; }
+operator { return T_OPERATOR; }
+[:][=]   { return T_DEF; }
+[=][>]   { return T_ARROW; }
+[*][=]   { return T_MUL_ASSIGN; }
+[/][=]   { return T_DIV_ASSIGN; }
+[%][=]   { return T_MOD_ASSIGN; }
+[+][=]   { return T_ADD_ASSIGN; }
+[-][=]   { return T_SUB_ASSIGN; }
+[|][|]   { return T_OR; }
+[&][&]   { return T_AND; }
+[=][=]   { return T_EQ; }
+[!][=]   { return T_NE; }
+[<][=]   { return T_LE; }
+[>][=]   { return T_GE; }
+[+][+]   { return T_INC; }
+[-][-]   { return T_DEC; }
 [.][.][0-9]+ {
     if (T_ERROR == parse_int(yytext+2, &yylval->int_lit, yylloc, filename)) {
         return T_ERROR;

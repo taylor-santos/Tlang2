@@ -75,6 +75,7 @@
     Vector *vec;
     struct Field *field;
     struct ClassBody *class;
+    struct Case *switchCase;
     SparseVector *svec;
     char *str;
     dstring dstr;
@@ -97,10 +98,13 @@
                    T_IF         "if"
                    T_ELSE       "else"
                    T_WHILE      "while"
+                   T_DO         "do"
                    T_IS         "is"
                    T_NOT        "not"
                    T_SWITCH     "switch"
                    T_CASE       "case"
+                   T_DEFAULT    "default"
+                   T_OPERATOR   "operator"
                    T_DEF        ":="
                    T_ARROW      "=>"
                    T_MUL_ASSIGN "*="
@@ -127,14 +131,18 @@
 
 %type<ast>  File Statement Definition Expression Class Return OptExpression Func
             Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If While
+            Switch Do
 %type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
             OptNamedArgs NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple
-            DefVars Constructor OptArguments Arguments OptElse
+            DefVars Constructor OptArguments Arguments OptElse OptCases Cases
+            OptDefault
 %type<svec> Types
 %type<type> Type TypeDef FuncDef TypeOptNamed
 %type<class> Fields OptFields
-%type<field> Field
+%type<switchCase> Case
+%type<field> Field Operator
 %type<qualifier> Qualifier
+%type<str> Binop
 
 %left T_AND T_OR
 %left T_EQ T_NE
@@ -170,6 +178,8 @@ Statement
   : Definition
   | If
   | While
+  | Do
+  | Switch
   | Impl
   | TypeStmt ';'
   | Expression ';'
@@ -195,8 +205,8 @@ DefVars
     }
 
 If
-  : T_IF '(' Expression ')' '{' OptStatements '}' OptElse {
-        $$ = ASTIf(@$, $3, $6, $8);
+  : T_IF Expression '{' OptStatements '}' OptElse {
+        $$ = ASTIf(@$, $2, $4, $6);
     }
 
 OptElse
@@ -211,8 +221,48 @@ OptElse
     }
 
 While
-  : T_WHILE '(' Expression ')' '{' OptStatements '}' {
-        $$ = ASTWhile(@$, $3, $6);
+  : T_WHILE Expression '{' OptStatements '}' {
+        $$ = ASTWhile(@$, $2, $4);
+    }
+
+Do
+  : T_DO '{' OptStatements '}' T_WHILE Expression ';' {
+        $$ = ASTDo(@$, $6, $3);
+    }
+
+Switch
+  : T_SWITCH Expression '{' OptCases OptDefault '}' {
+        $$ = ASTSwitch(@$, $2, $4, $5);
+    }
+
+OptCases
+  : %empty {
+        $$ = Vector();
+    }
+  | Cases
+
+Cases
+  : Case {
+        $$ = init_Vector($1);
+    }
+  | Cases Case {
+        $$ = Vector_append($1, $2);
+    }
+
+Case
+  : T_CASE Expression '{' OptStatements '}' {
+        $$ = ExprCase($2, $4);
+    }
+  | T_CASE T_IDENT T_IS Type '{' OptStatements '}' {
+        $$ = TypeCase($2, $4, $6);
+    }
+
+OptDefault
+  : %empty {
+        $$ = NULL;
+    }
+  | T_DEFAULT '{' OptStatements '}' {
+        $$ = $3;
     }
 
 TypeStmt
@@ -427,6 +477,11 @@ Fields
         $$->fields = Vector();
         $$->constructors = init_Vector($1);
     }
+  | Operator ';' {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->fields = init_Vector($1);
+        $$->constructors = Vector();
+    }
   | Fields Field ';' {
         $$ = $1;
         $$->fields = Vector_append($$->fields, $2);
@@ -435,12 +490,85 @@ Fields
         $$ = $1;
         $$->constructors = Vector_append($$->constructors, $2);
     }
+  | Fields Operator ';' {
+        $$ = $1;
+        $$->fields = Vector_append($$->fields, $2);
+    }
 
 Field
   : IdentList ':' Type {
         $$ = safe_malloc(sizeof(*$$));
         $$->names = $1;
         $$->type = $3;
+    }
+
+Operator
+  : T_OPERATOR Binop '(' TypeOptNamed ')' T_ARROW Type {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = init_Vector($2);
+        $$->type = FuncType(@$, Vector(), init_Vector($4), $7);
+    }
+
+Binop
+  : '*' {
+        $$ = safe_strdup("*");
+    }
+  | '/' {
+        $$ = safe_strdup("/");
+    }
+  | '%' {
+        $$ = safe_strdup("%");
+    }
+  | '+' {
+        $$ = safe_strdup("+");
+    }
+  | '-' {
+        $$ = safe_strdup("-");
+    }
+  | '<' {
+        $$ = safe_strdup("<");
+    }
+  | '>' {
+        $$ = safe_strdup(">");
+    }
+  | T_MUL_ASSIGN {
+        $$ = safe_strdup("*=");
+    }
+  | T_DIV_ASSIGN {
+        $$ = safe_strdup("/=");
+    }
+  | T_MOD_ASSIGN {
+        $$ = safe_strdup("%=");
+    }
+  | T_ADD_ASSIGN {
+        $$ = safe_strdup("+=");
+    }
+  | T_SUB_ASSIGN {
+        $$ = safe_strdup("-=");
+    }
+  | T_OR {
+        $$ = safe_strdup("||");
+    }
+  | T_AND {
+        $$ = safe_strdup("&&");
+    }
+  | T_EQ {
+        $$ = safe_strdup("==");
+    }
+  | T_NE {
+        $$ = safe_strdup("!=");
+    }
+  | T_LE {
+        $$ = safe_strdup("<=");
+    }
+  | T_GE {
+        $$ = safe_strdup(">=");
+    }
+  | T_INC {
+        $$ = safe_strdup("++");
+    }
+  | T_DEC {
+        $$ = safe_strdup("++");
     }
 
 Constructor

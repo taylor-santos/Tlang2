@@ -36,6 +36,30 @@ struct ClassBody {
     struct Vector *constructors; // Vector<AST*>
 };
 
+struct Case {
+    enum {
+        CASE_EXPR, CASE_TYPE
+    } caseType;
+    union {
+        AST *expr;
+        struct {
+            char *name;
+            struct Type *type;
+        } type;
+    };
+    struct Vector *stmts;
+};
+
+#define TypeCase(name, type, stmts) \
+    new_TypeCase(name, type, stmts)
+struct Case *
+new_TypeCase(char *name, struct Type *type, struct Vector *stmts);
+
+#define ExprCase(expr, stmts) \
+    new_ExprCase(expr, stmts)
+struct Case *
+new_ExprCase(AST *expr, struct Vector *stmts);
+
 void
 json_AST(const AST *this, FILE *out, int indent);
 
@@ -43,7 +67,13 @@ void
 json_field(const struct Field *field, FILE *out, int indent);
 
 void
+json_case(const struct Case *c, FILE *out, int indent);
+
+void
 delete_field(struct Field *field);
+
+void
+delete_case(struct Case *c);
 
 void
 delete_AST(AST *this);
@@ -179,5 +209,18 @@ new_ASTIf(YYLTYPE loc,
     new_ASTWhile(loc, cond, stmts)
 AST *
 new_ASTWhile(YYLTYPE loc, AST *cond, struct Vector *stmts);
+
+#define ASTDo(loc, cond, stmts) \
+    new_ASTDo(loc, cond, stmts)
+AST *
+new_ASTDo(YYLTYPE loc, AST *cond, struct Vector *stmts);
+
+#define ASTSwitch(loc, expr, cases, def) \
+    new_ASTSwitch(loc, expr, cases, def)
+AST *
+new_ASTSwitch(YYLTYPE loc,
+    AST *expr,
+    struct Vector *cases,
+    struct Vector *def);
 
 #endif
