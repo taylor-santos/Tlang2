@@ -78,7 +78,7 @@ resize(Map *map, unsigned int new_capacity) {
             unsigned long h = curr_entry->hash % new_capacity;
             for (new_entry = &new_entries[h];
                 NULL != *new_entry;
-                new_entries = &(*new_entry)->next) {
+                new_entry = &(*new_entry)->next) {
                 if (keycmp(curr_entry->key,
                     curr_entry->len,
                     (*new_entry)->key,
@@ -125,8 +125,7 @@ Map_put(Map *map, const void *key, size_t key_len, void *value, void *prev) {
             return 0;
         }
     }
-    new_entry = Entry(key, key_len, value, h);
-    *curr_entry = new_entry;
+    *curr_entry = Entry(key, key_len, value, h);
     map->size++;
     if ((double)map->size / map->capacity >= map->load_factor) {
         return resize(map, 2 * map->capacity);
