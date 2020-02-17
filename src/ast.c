@@ -36,7 +36,7 @@ void
 json_field(const struct Field *field, FILE *out, int indent) {
     json_start(out, &indent);
     json_label("names", out);
-    json_vector(field->names, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(field->names, (JSON_VALUE_FUNC)json_string, out, indent);
     json_comma(out, indent);
     json_label("type", out);
     json_type(field->type, out, indent);
@@ -61,7 +61,7 @@ json_case(const struct Case *c, FILE *out, int indent) {
     }
     json_comma(out, indent);
     json_label("statements", out);
-    json_vector(c->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(c->stmts, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
 }
 

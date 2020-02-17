@@ -223,4 +223,9 @@ new_ASTSwitch(YYLTYPE loc,
     struct Vector *cases,
     struct Vector *def);
 
+#define ASTCast(loc, expr, type) \
+    new_ASTCast(loc, expr, type)
+AST *
+new_ASTCast(YYLTYPE loc, AST *expr, struct Type *type);
+
 #endif

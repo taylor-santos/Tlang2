@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-typedef void (*JSON_MAP_TYPE)(const void *, FILE *, int);
+typedef void (*JSON_VALUE_FUNC)(const void *, FILE *, int);
 
 struct Vector;
 struct SparseVector;
@@ -20,7 +20,7 @@ void
 json_label(const char *label, FILE *out);
 
 void
-json_nlabel(const char *label, int len, FILE *out);
+json_nlabel(const char *label, size_t len, FILE *out);
 
 void
 json_string(const char *value, FILE *out, int indent);

@@ -32,8 +32,8 @@ json_label(const char *label, FILE *out) {
 }
 
 void
-json_nlabel(const char *label, int len, FILE *out) {
-    fprintf(out, "\"%.*s\": ", len, label);
+json_nlabel(const char *label, size_t len, FILE *out) {
+    fprintf(out, "\"%.*s\": ", (int)len, label);
 }
 
 void

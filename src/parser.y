@@ -90,6 +90,7 @@
                    T_IMPL       "impl"
                    T_NEW        "new"
                    T_RETURN     "return"
+                   T_NONE       "none"
                    T_CONST      "const"
                    T_FRIEND     "friend"
                    T_TRUE       "true"
@@ -131,18 +132,17 @@
 
 %type<ast>  File Statement Definition Expression Class Return OptExpression Func
             Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If While
-            Switch Do
-%type<vec>  OptStatements Statements OptGenerics IdentList OptInherits Inherits
-            OptNamedArgs NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple
-            DefVars Constructor OptArguments Arguments OptElse OptCases Cases
-            OptDefault
+            Switch Do CastExpr
+%type<vec>  OptStatements Statements IdentList OptInherits Inherits OptNamedArgs
+            NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple DefVars
+            Constructor OptArguments Arguments OptElse OptCases Cases OptDefault
 %type<svec> Types
 %type<type> Type TypeDef FuncDef TypeOptNamed
 %type<class> Fields OptFields
 %type<switchCase> Case
 %type<field> Field Operator
 %type<qualifier> Qualifier
-%type<str> Binop
+%type<str> Binop Postop
 
 %left T_AND T_OR
 %left T_EQ T_NE
@@ -338,7 +338,7 @@ UnaryExpr
         char *name = safe_strdup("--");
         AST *func = ASTVariable(@$, name);
         $$ = ASTCall(@$, func, args);
-     }
+    }
   | '-' PostfixExpr {
         Vector *args = init_Vector($2);
         char *name = safe_strdup("-");
@@ -355,8 +355,14 @@ UnaryExpr
         $$ = ASTSpread(@$, $2);
     }
 
-OpExpr
+CastExpr
   : UnaryExpr
+  | CastExpr T_ARROW Type {
+        $$ = ASTCast(@$, $1, $3);
+    }
+
+OpExpr
+  : CastExpr
   | OpExpr '*' OpExpr {
         Vector *args = init_Vector($3);
         char *name = safe_strdup("*");
@@ -454,8 +460,11 @@ Expression
   | UnaryExpr T_SUB_ASSIGN Expression
 
 Class
-  : T_CLASS OptGenerics OptInherits '{' OptFields '}' {
-        $$ = ASTClass(@$, $2, $3, $5);
+  : T_CLASS OptInherits '{' OptFields '}' {
+        $$ = ASTClass(@$, Vector(), $2, $4);
+    }
+  | '<' IdentList '>' T_CLASS OptInherits '{' OptFields '}' {
+        $$ = ASTClass(@$, $2, $5, $7);
     }
 
 OptFields
@@ -503,10 +512,25 @@ Field
     }
 
 Operator
-  : T_OPERATOR Binop '(' TypeOptNamed ')' T_ARROW Type {
+  : T_OPERATOR Binop '(' Type ')' T_ARROW Type {
         $$ = safe_malloc(sizeof(*$$));
         $$->names = init_Vector($2);
         $$->type = FuncType(@$, Vector(), init_Vector($4), $7);
+    }
+  | T_OPERATOR Binop '(' T_IDENT ':' Type ')' T_ARROW Type {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = init_Vector($2);
+        $$->type = FuncType(@$, Vector(), init_Vector($6), $9);
+    }
+  | T_OPERATOR Postop T_ARROW Type {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = init_Vector($2);
+        $$->type = FuncType(@$, Vector(), Vector(), $4);
+    }
+  | T_OPERATOR T_ARROW Type {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = init_Vector(safe_strdup("=>"));
+        $$->type = FuncType(@$, Vector(), Vector(), $3);
     }
 
 Binop
@@ -564,7 +588,9 @@ Binop
   | T_GE {
         $$ = safe_strdup(">=");
     }
-  | T_INC {
+
+Postop
+  : T_INC {
         $$ = safe_strdup("++");
     }
   | T_DEC {
@@ -577,8 +603,11 @@ Constructor
     }
 
 Impl
-  : T_IMPL T_IDENT OptGenerics '{' OptStatements '}' {
-        $$ = ASTImpl(@$, $2, $3, $5);
+  : T_IMPL T_IDENT '{' OptStatements '}' {
+        $$ = ASTImpl(@$, $2, Vector(), $4);
+    }
+  | T_IMPL '<' IdentList '>' T_IDENT '{' OptStatements '}' {
+        $$ = ASTImpl(@$, $5, $3, $7);
     }
 
 OptInherits
@@ -605,13 +634,16 @@ Type
     }
 
 TypeDef
-  : T_IDENT OptGenerics {
-        $$ = ObjectType(@$, $1, $2);
+  : T_IDENT {
+        $$ = ObjectType(@$, $1, Vector());
+    }
+  | '<' IdentList '>' T_IDENT {
+        $$ = ObjectType(@$, $4, $2);
+    }
+  | T_NONE {
+        $$ = NoneType(@$);
     }
   | FuncDef
-  | '[' Expression ']' OptGenerics {
-        $$ = ExprType(@$, $2, $4);
-    }
   | '(' Type ')' {
         $$ = $2;
     }
@@ -661,12 +693,12 @@ Qualifier
     }
 
 FuncDef
-  : T_FUNC OptGenerics '(' OptArgsOptNamed ')' T_ARROW Type {
-        $$ = FuncType(@$, $2, $4, $7);
+  : '<' IdentList '>' T_FUNC '(' OptArgsOptNamed ')' T_ARROW Type {
+        $$ = FuncType(@$, $2, $6, $9);
     }
-  | T_FUNC OptGenerics '(' OptArgsOptNamed ')' {
-          $$ = FuncType(@$, $2, $4, NoneType(@$));
-      }
+  | T_FUNC '(' OptArgsOptNamed ')' T_ARROW Type {
+        $$ = FuncType(@$, Vector(), $3, $6);
+    }
 
 OptArgsOptNamed
   : %empty {
@@ -688,21 +720,14 @@ TypeOptNamed
     }
   | Type
 
-OptGenerics
-  : %empty {
-        $$ = Vector();
+Func
+  : '<' IdentList '>' T_FUNC '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
+        $$ = ASTFunc(@$, $2, $6, $9, $11);
     }
-  | '<' IdentList '>' {
-        $$ = $2;
+  | T_FUNC '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
+        $$ = ASTFunc(@$, Vector(), $3, $6, $8);
     }
 
-Func
-  : T_FUNC OptGenerics '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
-        $$ = ASTFunc(@$, $2, $4, $7, $9);
-    }
-  | T_FUNC OptGenerics '(' OptNamedArgs ')' '{' OptStatements '}' {
-        $$ = ASTFunc(@$, $2, $4, NoneType(@$), $7);
-    }
 
 OptNamedArgs
   : %empty {
@@ -719,8 +744,11 @@ NamedArgs
     }
 
 Init
-  : T_NEW T_IDENT OptGenerics '(' OptArguments ')' {
-        $$ = ASTInit(@$, $2, $3, $5);
+  : T_NEW T_IDENT '(' OptArguments ')' {
+        $$ = ASTInit(@$, $2, Vector(), $4);
+    }
+  | T_NEW '<' IdentList '>' T_IDENT '(' OptArguments ')' {
+        $$ = ASTInit(@$, $5, $3, $7);
     }
   | T_NEW Type T_INDEX {
         $$ = ASTArray(@$, $2, $3);

@@ -189,6 +189,7 @@ func     { return T_FUNC; }
 impl     { return T_IMPL; }
 new      { return T_NEW; }
 return   { return T_RETURN; }
+none     { return T_NONE; }
 const    { return T_CONST; }
 friend   { return T_FRIEND; }
 true     { return T_TRUE; }

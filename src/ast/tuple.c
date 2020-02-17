@@ -21,7 +21,7 @@ json(const void *this, FILE *out, int indent) {
     json_string("tuple", out, indent);
     json_comma(out, indent);
     json_label("elements", out);
-    json_vector(ast->exprs, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->exprs, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
 }
 

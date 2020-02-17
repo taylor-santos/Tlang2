@@ -2,6 +2,7 @@
 #define VECTOR_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 #define Vector() new_Vector(0)
 

@@ -30,7 +30,7 @@ json(const void *this, FILE *out, int indent) {
     json_string("definition", out, indent);
     json_comma(out, indent);
     json_label("variables", out);
-    json_vector(ast->vars, (JSON_MAP_TYPE)json_underscore, out, indent);
+    json_vector(ast->vars, (JSON_VALUE_FUNC)json_underscore, out, indent);
     json_comma(out, indent);
     json_label("expr", out);
     json_AST(ast->expr, out, indent);

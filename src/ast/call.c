@@ -25,7 +25,7 @@ json(const void *this, FILE *out, int indent) {
     json_AST(ast->expr, out, indent);
     json_comma(out, indent);
     json_label("args", out);
-    json_vector(ast->args, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->args, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
 }
 

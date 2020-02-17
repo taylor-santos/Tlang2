@@ -87,6 +87,7 @@ typedef struct TypeCheckState {
     struct Map *newInitSymbols; // Map<char*, NULL>
     struct Vector *classes; // Vector<const struct ClassType*>
     const struct ClassType *builtins[NUM_BUILTINS];
+    struct Map *compare; // Map<Type**, Map<Type**, int>>
     // NULL if not in function, otherwise return type of current function
     Type *funcType;
     // NULL initially, gets set by return statements. Used to tell if there are
@@ -116,6 +117,9 @@ setTypeQualifiers(Type *type, struct Vector *qualifiers);
 int
 TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
 
+void
+AddComparison(const Type *type, TypeCheckState *state);
+
 int
 TypeVerify(Type *type, const TypeCheckState *state, char **msg);
 
@@ -133,6 +137,9 @@ setInit(Type *type, unsigned char init);
 
 const void *
 getTypeData(Type *type);
+
+char *
+ClassTypeToString(const struct ClassType *class);
 
 char *
 typeToString(const Type *type);

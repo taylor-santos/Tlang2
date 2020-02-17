@@ -23,7 +23,7 @@ json(const void *this, FILE *out, int indent) {
     json_string("type declaration", out, indent);
     json_comma(out, indent);
     json_label("vars", out);
-    json_vector(ast->vars, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->vars, (JSON_VALUE_FUNC)json_string, out, indent);
     json_comma(out, indent);
     json_label("type", out);
     json_type(ast->type, out, indent);

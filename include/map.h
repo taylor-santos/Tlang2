@@ -9,6 +9,7 @@
 typedef struct Map Map;
 typedef void (*MAP_DELETE_FUNC)(void *);
 typedef void *(*MAP_COPY_FUNC)(void *);
+typedef void (*JSON_KEY_FUNC)(const void *, size_t, FILE *);
 
 typedef struct MapIterData {
     void *key;
@@ -52,7 +53,11 @@ void
 delete_Map(Map *map, MAP_DELETE_FUNC delete_value);
 
 void
-json_Map(const Map *map, JSON_MAP_TYPE json_value, FILE *out, int indent);
+json_Map(const Map *map,
+    JSON_KEY_FUNC json_key,
+    JSON_VALUE_FUNC json_value,
+    FILE *out,
+    int indent);
 
 Map *
 copy_Map(const Map *map, MAP_COPY_FUNC copy_value);

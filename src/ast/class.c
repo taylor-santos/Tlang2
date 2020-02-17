@@ -20,7 +20,7 @@ struct ASTClass {
 
 static void
 json_constructor(Vector *cons, FILE *out, int indent) {
-    json_vector(cons, (JSON_MAP_TYPE)json_type, out, indent);
+    json_vector(cons, (JSON_VALUE_FUNC)json_type, out, indent);
 }
 
 static void
@@ -31,16 +31,16 @@ json(const void *this, FILE *out, int indent) {
     json_string("class", out, indent);
     json_comma(out, indent);
     json_label("generics", out);
-    json_vector(ast->generics, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->generics, (JSON_VALUE_FUNC)json_string, out, indent);
     json_comma(out, indent);
     json_label("supers", out);
-    json_vector(ast->supers, (JSON_MAP_TYPE)json_type, out, indent);
+    json_vector(ast->supers, (JSON_VALUE_FUNC)json_type, out, indent);
     json_comma(out, indent);
     json_label("constructors", out);
-    json_vector(ast->cons, (JSON_MAP_TYPE)json_constructor, out, indent);
+    json_vector(ast->cons, (JSON_VALUE_FUNC)json_constructor, out, indent);
     json_comma(out, indent);
     json_label("fields", out);
-    json_vector(ast->fields, (JSON_MAP_TYPE)json_field, out, indent);
+    json_vector(ast->fields, (JSON_VALUE_FUNC)json_field, out, indent);
     json_end(out, &indent);
 }
 
@@ -127,6 +127,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         ClassType(ast->super.loc, Vector(), Vector(), constructors, fields);
     const struct ClassType *class = getTypeData(ast->type);
     Vector_append(state->classes, (void *)class);
+    AddComparison(ast->type, state);
     return 0;
 }
 

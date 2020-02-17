@@ -42,7 +42,7 @@ copy_Qualifiers(const Qualifiers *q) {
 
 static void
 json_constructor(Vector *cons, FILE *out, int indent) {
-    json_vector(cons, (JSON_MAP_TYPE)json_type, out, indent);
+    json_vector(cons, (JSON_VALUE_FUNC)json_type, out, indent);
 }
 
 void
@@ -85,7 +85,7 @@ json_type(const Type *type, FILE *out, int indent) {
         json_comma(out, indent);
         json_label("qualifiers", out);
         json_vector(type->qualifiers,
-            (JSON_MAP_TYPE)json_qualifier,
+            (JSON_VALUE_FUNC)json_qualifier,
             out,
             indent);
     }
@@ -94,13 +94,13 @@ json_type(const Type *type, FILE *out, int indent) {
             json_comma(out, indent);
             json_label("generics", out);
             json_vector(type->func->generics,
-                (JSON_MAP_TYPE)json_string,
+                (JSON_VALUE_FUNC)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("args", out);
             json_vector(type->func->args,
-                (JSON_MAP_TYPE)json_type,
+                (JSON_VALUE_FUNC)json_type,
                 out,
                 indent);
             json_comma(out, indent);
@@ -111,25 +111,26 @@ json_type(const Type *type, FILE *out, int indent) {
             json_comma(out, indent);
             json_label("generics", out);
             json_vector(type->class->generics,
-                (JSON_MAP_TYPE)json_string,
+                (JSON_VALUE_FUNC)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("supers", out);
             json_vector(type->class->supers,
-                (JSON_MAP_TYPE)json_string,
+                (JSON_VALUE_FUNC)json_string,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("constructors", out);
             json_vector(type->class->constructors,
-                (JSON_MAP_TYPE)json_constructor,
+                (JSON_VALUE_FUNC)json_constructor,
                 out,
                 indent);
             json_comma(out, indent);
             json_label("fields", out);
             json_Map(type->class->fields,
-                (JSON_MAP_TYPE)json_type,
+                (JSON_KEY_FUNC)json_nlabel,
+                (JSON_VALUE_FUNC)json_type,
                 out,
                 indent);
             break;
@@ -140,7 +141,7 @@ json_type(const Type *type, FILE *out, int indent) {
             json_comma(out, indent);
             json_label("generics", out);
             json_vector(type->object->generics,
-                (JSON_MAP_TYPE)json_string,
+                (JSON_VALUE_FUNC)json_string,
                 out,
                 indent);
             break;
@@ -151,7 +152,7 @@ json_type(const Type *type, FILE *out, int indent) {
             json_comma(out, indent);
             json_label("generics", out);
             json_vector(type->expr->generics,
-                (JSON_MAP_TYPE)json_string,
+                (JSON_VALUE_FUNC)json_string,
                 out,
                 indent);
             break;
@@ -159,7 +160,7 @@ json_type(const Type *type, FILE *out, int indent) {
             json_comma(out, indent);
             json_label("types", out);
             json_sparse_vector(type->tuple->types,
-                (JSON_MAP_TYPE)json_type,
+                (JSON_VALUE_FUNC)json_type,
                 out,
                 indent);
             break;
@@ -167,7 +168,7 @@ json_type(const Type *type, FILE *out, int indent) {
             json_comma(out, indent);
             json_label("types", out);
             json_sparse_vector(type->spread->types,
-                (JSON_MAP_TYPE)json_type,
+                (JSON_VALUE_FUNC)json_type,
                 out,
                 indent);
             break;
@@ -337,18 +338,12 @@ FuncTypeCompare(const struct FuncType *type1,
 }
 
 static int
-ObjectTypeCompare(const struct ObjectType *type1,
-    const struct ObjectType *type2,
+ClassTypeCompare(const struct ClassType *class1,
+    const struct ClassType *class2,
     const TypeCheckState *state) {
-
-    if (type1->class == NULL || type2->class == NULL) {
-        print_ICE("Unverified object type\n");
-        exit(EXIT_FAILURE);
-    }
-    if (type1->class == type2->class) {
+    if (class1 == class2) {
         return 0;
     }
-    const struct ClassType *class1 = type1->class, *class2 = type2->class;
     size_t ngens1 = Vector_size(class1->generics),
         ngens2 = Vector_size(class2->generics);
     if (ngens1 > 0 || ngens2 > 0) {
@@ -369,6 +364,22 @@ ObjectTypeCompare(const struct ObjectType *type1,
     return 0;
 }
 
+static int
+ObjectTypeCompare(const struct ObjectType *type1,
+    const struct ObjectType *type2,
+    const TypeCheckState *state) {
+
+    if (type1->class == NULL || type2->class == NULL) {
+        print_ICE("Unverified object type\n");
+        exit(EXIT_FAILURE);
+    }
+    if (type1->class == type2->class) {
+        return 0;
+    }
+    const struct ClassType *class1 = type1->class, *class2 = type2->class;
+    return ClassTypeCompare(class1, class2, state);
+}
+
 int
 TypeCompare(const Type *type1,
     const Type *type2,
@@ -376,12 +387,15 @@ TypeCompare(const Type *type1,
     if (type1->type != type2->type) {
         return 1;
     }
+    Map *compare;
+    if (!Map_get(state->compare, &type1, sizeof(type1), &compare)) {
+        return !Map_contains(compare, &type2, sizeof(type2));
+    }
     switch (type1->type) {
         case TYPE_FUNC:
             return FuncTypeCompare(type1->func, type2->func, state);
         case TYPE_CLASS:
-            print_ICE("TypeCompare not implemented for classes\n");
-            return 1;
+            return ClassTypeCompare(type1->class, type2->class, state);
         case TYPE_OBJECT:
             return ObjectTypeCompare(type1->object, type2->object, state);
         case TYPE_EXPR:
@@ -406,6 +420,25 @@ TypeCompare(const Type *type1,
             return 1;
     }
     return 1;
+}
+
+void
+AddComparison(const Type *type, TypeCheckState *state) {
+    Map *newCompare = Map();
+    Iterator *it = Map_iterator(state->compare);
+    while (it->hasNext(it)) {
+        MapIterData next = it->next(it);
+        Map *m = next.value;
+        Type **typePtr = next.key;
+        if (!TypeCompare(*typePtr, type, state)) {
+            Map_put(m, &type, sizeof(type), NULL, NULL);
+        }
+        if (!TypeCompare(type, *typePtr, state)) {
+            Map_put(newCompare, next.key, next.len, NULL, NULL);
+        }
+    }
+    it->delete(it);
+    Map_put(state->compare, &type, sizeof(type), newCompare, NULL);
 }
 
 static int

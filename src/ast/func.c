@@ -27,16 +27,16 @@ json(const void *this, FILE *out, int indent) {
     json_string("func", out, indent);
     json_comma(out, indent);
     json_label("generics", out);
-    json_vector(ast->generics, (JSON_MAP_TYPE)json_string, out, indent);
+    json_vector(ast->generics, (JSON_VALUE_FUNC)json_string, out, indent);
     json_comma(out, indent);
     json_label("args", out);
-    json_vector(ast->args, (JSON_MAP_TYPE)json_field, out, indent);
+    json_vector(ast->args, (JSON_VALUE_FUNC)json_field, out, indent);
     json_comma(out, indent);
     json_label("ret_type", out);
     json_type(ast->ret_type, out, indent);
     json_comma(out, indent);
     json_label("statements", out);
-    json_vector(ast->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->stmts, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
 }
 

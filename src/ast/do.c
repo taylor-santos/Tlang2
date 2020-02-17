@@ -26,7 +26,7 @@ json(const void *this, FILE *out, int indent) {
     json_AST(ast->cond, out, indent);
     json_comma(out, indent);
     json_label("stmts", out);
-    json_vector(ast->stmts, (JSON_MAP_TYPE)json_AST, out, indent);
+    json_vector(ast->stmts, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
 }
 
@@ -49,46 +49,30 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     } else {
         const struct ObjectType *object = getTypeData(condType);
         const struct ClassType *class = object->class;
-        const char *fieldName = "toBool";
+        const char *fieldName = "=>";
         Type *fieldType;
         if (Map_get(class->fields, fieldName, strlen(fieldName), &fieldType)) {
+            char *typeName = typeToString(condType);
             print_code_error(stderr,
                 ast->cond->loc,
-                "conditional expression type does not implement a toBool() "
-                "method");
-            status = 1;
-        } else if (typeOf(fieldType) != TYPE_FUNC) {
-            print_code_error(stderr,
-                ast->cond->loc,
-                "conditional expression has a toBool field, but it is not a "
-                "method");
+                "conditional expression with type \"%s\" does not implement"
+                " an explicit cast to bool",
+                typeName);
+            free(typeName);
             status = 1;
         } else {
             const struct FuncType *funcType = getTypeData(fieldType);
-            size_t ngens = Vector_size(funcType->generics);
-            size_t nargs = Vector_size(funcType->args);
-            if (ngens != 0) {
-                print_code_error(stderr,
-                    ast->cond->loc,
-                    "conditional expression's toBool() method cannot be a "
-                    "generic function");
-                status = 1;
-            }
-            if (nargs != 0) {
-                print_code_error(stderr,
-                    ast->cond->loc,
-                    "conditional expression's toBool() method must take zero"
-                    " arguments");
-                status = 1;
-            }
             Type *retType = funcType->ret_type;
             const struct ObjectType *retObj = getTypeData(retType);
             if (typeOf(retType) != TYPE_OBJECT ||
                 retObj->class != state->builtins[BUILTIN_BOOL]) {
+                char *typeName = typeToString(condType);
                 print_code_error(stderr,
                     ast->cond->loc,
-                    "conditional expression's toBool() method must return a "
-                    "boolean value");
+                    "conditional expression with type \"%s\" does not implement"
+                    " an explicit cast to bool",
+                    typeName);
+                free(typeName);
                 status = 1;
             }
         }

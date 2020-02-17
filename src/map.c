@@ -174,7 +174,11 @@ delete_Map(Map *this, MAP_DELETE_FUNC delete_value) {
 }
 
 void
-json_Map(const Map *map, JSON_MAP_TYPE json_value, FILE *out, int indent) {
+json_Map(const Map *map,
+    JSON_KEY_FUNC json_key,
+    JSON_VALUE_FUNC json_value,
+    FILE *out,
+    int indent) {
     json_start(out, &indent);
     int first = 1;
     for (size_t i = 0; i < map->capacity; i++) {
@@ -185,7 +189,7 @@ json_Map(const Map *map, JSON_MAP_TYPE json_value, FILE *out, int indent) {
                 json_comma(out, indent);
             }
             first = 0;
-            json_nlabel(curr->key, (int)curr->len, out);
+            json_key(curr->key, curr->len, out);
             json_value(curr->value, out, indent);
         }
     }

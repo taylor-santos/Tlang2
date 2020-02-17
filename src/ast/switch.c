@@ -32,11 +32,11 @@ json(const void *this, FILE *out, int indent) {
     json_AST(ast->expr, out, indent);
     json_comma(out, indent);
     json_label("cases", out);
-    json_vector(ast->cases, (JSON_MAP_TYPE)json_case, out, indent);
+    json_vector(ast->cases, (JSON_VALUE_FUNC)json_case, out, indent);
     if (NULL != ast->def) {
         json_comma(out, indent);
         json_label("default", out);
-        json_vector(ast->def, (JSON_MAP_TYPE)json_AST, out, indent);
+        json_vector(ast->def, (JSON_VALUE_FUNC)json_AST, out, indent);
     }
     json_end(out, &indent);
 }
