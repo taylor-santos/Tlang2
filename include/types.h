@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include "ast.h"
 
-typedef struct Type Type;
-struct Type;
 struct Vector;
 struct SparseVector;
 struct Map;
@@ -14,10 +12,8 @@ typedef enum Types {
     TYPE_FUNC,
     TYPE_CLASS,
     TYPE_OBJECT,
-    TYPE_EXPR,
     TYPE_TUPLE,
     TYPE_SPREAD,
-    TYPE_NAMED,
     TYPE_NONE,
     TYPE_ARRAY,
     TYPE_MAYBE
@@ -27,13 +23,36 @@ typedef enum Qualifiers {
     Q_CONST = 0x1, Q_FRIEND = 0x2
 } Qualifiers;
 
+Qualifiers *
+copy_Qualifiers(const Qualifiers *q);
+
+typedef struct Type Type;
+
+struct Type {
+    void (*json)(const void *this, FILE *out, int indent);
+    Type *(*copy)(const void *this);
+    int (*compare)(const void *this,
+        const void *other,
+        const struct TypeCheckState *state);
+    int (*verify)(void *type, const struct TypeCheckState *state, char **msg);
+    char *(*toString)(const void *this);
+    void (*delete)(void *this);
+    Types type;
+    struct Vector *qualifiers; // Vector<Qualifiers*>
+    unsigned char init : 1;
+    unsigned char isCopy : 1;
+    YYLTYPE loc;
+};
+
 struct FuncType {
+    Type super;
     struct Vector *generics; // Vector<char*>
     struct Vector *args;     // Vector<Type*>
     Type *ret_type;
 };
 
 struct ClassType {
+    Type super;
     struct Vector *generics;     // Vector<char*>
     struct Vector *supers;       // Vector<char*>
     struct Vector *constructors; // Vector<Vector<Type*>>
@@ -41,35 +60,33 @@ struct ClassType {
 };
 
 struct ObjectType {
+    Type super;
     char *name;
     struct Vector *generics; // Vector<char*>
     struct ClassType *class;
 };
 
-struct ExprType {
-    AST *expr;
-    struct Vector *generics; // Vector<char*>
-    int ownsAST;
-};
-
 struct TupleType {
+    Type super;
     struct SparseVector *types; // Vector<Type*>
 };
 
 struct SpreadType {
+    Type super;
     struct SparseVector *types; // Vector<Type*>
 };
 
-struct NamedType {
-    char *name;
-    Type *type;
+struct NoneType {
+    Type super;
 };
 
 struct ArrayType {
+    Type super;
     Type *type;
 };
 
 struct MaybeType {
+    Type super;
     Type *type;
 };
 
@@ -102,47 +119,17 @@ json_type(const Type *type, FILE *out, int indent);
 void
 json_qualifier(const Qualifiers *value, FILE *out, int indent);
 
-Type *
-copy_type(const Type *type);
-
 void
 delete_type(Type *type);
 
 void
-delete_ClassType(struct ClassType *class);
+delete_ClassType(struct ClassType *type);
 
-void
-setTypeQualifiers(Type *type, struct Vector *qualifiers);
-
-int
-TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
+Type *
+copy_type(Type *type);
 
 void
 AddComparison(const Type *type, TypeCheckState *state);
-
-int
-TypeVerify(Type *type, const TypeCheckState *state, char **msg);
-
-Types
-typeOf(const Type *type);
-
-YYLTYPE
-typeLoc(const Type *type);
-
-unsigned char
-isInit(const Type *type);
-
-void
-setInit(Type *type, unsigned char init);
-
-const void *
-getTypeData(Type *type);
-
-char *
-ClassTypeToString(const struct ClassType *class);
-
-char *
-typeToString(const Type *type);
 
 #define FuncType(loc, gen, args, ret) \
     new_FuncType(loc, gen, args, ret)
@@ -166,11 +153,6 @@ new_ClassType(YYLTYPE loc,
 Type *
 new_ObjectType(YYLTYPE loc, char *name, struct Vector *generics);
 
-#define ExprType(loc, expr, gen) \
-    new_ExprType(loc, expr, gen)
-Type *
-new_ExprType(YYLTYPE loc, AST *expr, struct Vector *generics);
-
 #define TupleType(loc, types) \
     new_TupleType(loc, types)
 Type *
@@ -179,12 +161,7 @@ new_TupleType(YYLTYPE loc, struct SparseVector *types);
 #define SpreadType(tuple) \
     new_SpreadType(tuple)
 Type *
-new_SpreadType(Type *tuple);
-
-#define NamedType(loc, name, type) \
-    new_NamedType(loc, name, type)
-Type *
-new_NamedType(YYLTYPE loc, char *name, Type *type);
+new_SpreadType(struct TupleType *tuple);
 
 #define NoneType(loc) \
     new_NoneType(loc)

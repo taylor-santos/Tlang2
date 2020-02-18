@@ -36,8 +36,8 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &exprType)) {
         return 1;
     }
-    if (TYPE_OBJECT != typeOf(exprType)) {
-        char *typeName = typeToString(exprType);
+    if (TYPE_OBJECT != exprType->type) {
+        char *typeName = exprType->toString(exprType);
         print_code_error(stderr,
             ast->super.loc,
             "member access operator used on non-object type \"%s\"",
@@ -45,11 +45,11 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct ObjectType *object = getTypeData(exprType);
+    const struct ObjectType *object = (void *)exprType->type;
     const struct ClassType *class = object->class;
     Type *fieldType;
     if (Map_get(class->fields, ast->name, strlen(ast->name), &fieldType)) {
-        char *typeName = typeToString(exprType);
+        char *typeName = exprType->toString(exprType);
         print_code_error(stderr,
             ast->super.loc,
             "object with type \"%s\" doesn't have a member \"%s\"",

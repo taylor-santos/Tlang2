@@ -37,8 +37,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     size_t nvars;
     char *msg;
 
-    if (TypeVerify(ast->type, state, &msg)) {
-        print_code_error(stderr, typeLoc(ast->type), msg);
+    if (ast->type->verify(ast->type, state, &msg)) {
+        print_code_error(stderr, ast->type->loc, msg);
         free(msg);
         return 1;
     }

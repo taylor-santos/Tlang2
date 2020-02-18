@@ -40,9 +40,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         if (ast->expr->getType(ast->expr, state, &retType)) {
             return 1;
         }
-        if (TypeCompare(retType, state->funcType, state)) {
-            char *expectName = typeToString(state->funcType);
-            char *givenName = typeToString(retType);
+        if (retType->compare(retType, state->funcType, state)) {
+            char *expectName = state->funcType->toString(state->funcType);
+            char *givenName = retType->toString(retType);
             print_code_error(stderr,
                 ast->super.loc,
                 "function's return type is \"%s\" but returned value has "
@@ -57,8 +57,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 0;
     }
     // Returns nothing
-    if (TYPE_NONE != typeOf(state->funcType)) {
-        char *expectName = typeToString(state->funcType);
+    if (TYPE_NONE != state->funcType->type) {
+        char *expectName = state->funcType->toString(state->funcType);
         print_code_error(stderr,
             ast->super.loc,
             "empty return statement in a function that returns \"%s\"",

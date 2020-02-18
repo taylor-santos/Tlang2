@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include "safe.h"
 #include "json.h"
-#include "vector.h"
 #include "parser.h"
 
 typedef struct ASTArray ASTArray;
@@ -35,11 +34,11 @@ static int
 getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTArray *ast = this;
     char *msg;
-    if (TypeVerify(ast->array_type, state, &msg)) {
-        print_code_error(stderr, typeLoc(ast->array_type), msg);
+    if (ast->array_type->verify(ast->array_type, state, &msg)) {
+        print_code_error(stderr, ast->array_type->loc, msg);
         return 1;
     }
-    Type *type_copy = copy_type(ast->array_type);
+    Type *type_copy = ast->array_type->copy(ast->array_type);
     *typeptr = ast->type = ArrayType(ast->super.loc, type_copy);
     return 0;
 }

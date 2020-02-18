@@ -34,7 +34,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             "unknown variable \"%s\"",
             ast->name);
         return 1;
-    } else if (!isInit(type)) {
+    } else if (!type->init) {
         print_code_error(stderr,
             ast->super.loc,
             "variable \"%s\" used before initialization",

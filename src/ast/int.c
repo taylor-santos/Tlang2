@@ -28,7 +28,7 @@ static int
 getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTInt *ast = this;
     char *msg;
-    if (TypeVerify(ast->type, state, &msg)) {
+    if (ast->type->verify(ast->type, state, &msg)) {
         print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
@@ -50,7 +50,7 @@ new_ASTInt(YYLTYPE loc, long long int val) {
     Type *type;
 
     type = new_ObjectType(loc, safe_strdup("int"), Vector());
-    setInit(type, 1);
+    type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
         { json, getType, delete, loc }, val, type

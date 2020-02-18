@@ -38,8 +38,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
 
     if (ast->cond->getType(ast->cond, state, &condType)) {
         status = 1;
-    } else if (typeOf(condType) != TYPE_OBJECT) {
-        char *typeName = typeToString(condType);
+    } else if (TYPE_OBJECT != condType->type) {
+        char *typeName = condType->toString(condType);
         print_code_error(stderr,
             ast->cond->loc,
             "invalid condition type \"%s\"",
@@ -47,12 +47,12 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         status = 1;
     } else {
-        const struct ObjectType *object = getTypeData(condType);
+        const struct ObjectType *object = (void *)condType->type;
         const struct ClassType *class = object->class;
         const char *fieldName = "=>";
         Type *fieldType;
         if (Map_get(class->fields, fieldName, strlen(fieldName), &fieldType)) {
-            char *typeName = typeToString(condType);
+            char *typeName = condType->toString(condType);
             print_code_error(stderr,
                 ast->cond->loc,
                 "conditional expression with type \"%s\" does not implement"
@@ -61,12 +61,12 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             free(typeName);
             status = 1;
         } else {
-            const struct FuncType *funcType = getTypeData(fieldType);
+            const struct FuncType *funcType = (void *)fieldType->type;
             Type *retType = funcType->ret_type;
-            const struct ObjectType *retObj = getTypeData(retType);
-            if (typeOf(retType) != TYPE_OBJECT ||
+            const struct ObjectType *retObj = (void *)retType->type;
+            if (TYPE_OBJECT != retType->type ||
                 retObj->class != state->builtins[BUILTIN_BOOL]) {
-                char *typeName = typeToString(condType);
+                char *typeName = condType->toString(condType);
                 print_code_error(stderr,
                     ast->cond->loc,
                     "conditional expression with type \"%s\" does not implement"

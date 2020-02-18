@@ -29,7 +29,7 @@ static int
 getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
     ASTString *ast = this;
     char *msg;
-    if (TypeVerify(ast->type, state, &msg)) {
+    if (ast->type->verify(ast->type, state, &msg)) {
         print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
@@ -52,7 +52,7 @@ new_ASTString(YYLTYPE loc, dstring str) {
     Type *type;
 
     type = ObjectType(loc, safe_strdup("string"), Vector());
-    setInit(type, 1);
+    type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
         { json, getType, delete, loc }, str, type

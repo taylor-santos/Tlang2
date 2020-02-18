@@ -83,8 +83,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         for (size_t j = 0; j < nargs; j++) {
             Type *argType = Vector_get(con, j);
             char *msg;
-            if (TypeVerify(argType, state, &msg)) {
-                print_code_error(stderr, typeLoc(argType), msg);
+            if (argType->verify(argType, state, &msg)) {
+                print_code_error(stderr, argType->loc, msg);
                 free(msg);
                 status = 1;
             }
@@ -96,8 +96,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     for (size_t i = 0; i < nfields; i++) {
         struct Field *field = Vector_get(ast->fields, i);
         char *msg;
-        if (TypeVerify(field->type, state, &msg)) {
-            print_code_error(stderr, typeLoc(field->type), msg);
+        if (field->type->verify(field->type, state, &msg)) {
+            print_code_error(stderr, field->type->loc, msg);
             free(msg);
             status = 1;
             continue;
@@ -125,8 +125,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     }
     *typeptr = ast->type =
         ClassType(ast->super.loc, Vector(), Vector(), constructors, fields);
-    const struct ClassType *class = getTypeData(ast->type);
-    Vector_append(state->classes, (void *)class);
+    Vector_append(state->classes, ast->type);
     AddComparison(ast->type, state);
     return 0;
 }

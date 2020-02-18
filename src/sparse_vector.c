@@ -48,8 +48,12 @@ SparseVector_get(const SparseVector *this,
         print_ICE("Invalid index passed to Vector get().\n");
         exit(EXIT_FAILURE);
     }
-    *((const void **)element_ptr) = this->items[index];
-    *count_ptr = this->counts[index];
+    if (NULL != element_ptr) {
+        *((const void **)element_ptr) = this->items[index];
+    }
+    if (NULL != count_ptr) {
+        *count_ptr = this->counts[index];
+    }
     return 0;
 }
 

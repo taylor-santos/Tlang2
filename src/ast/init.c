@@ -51,8 +51,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             ast->name);
         return 1;
     }
-    if (typeOf(classType) != TYPE_CLASS) {
-        char *typeName = typeToString(classType);
+    if (TYPE_CLASS != classType->type) {
+        char *typeName = classType->toString(classType);
         print_code_error(stderr,
             ast->super.loc,
             "\"%s\" has non-class type \"%s\"",
@@ -80,19 +80,19 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         Vector_append(ast->argTypes, type_copy);
     }
 
-    const struct ClassType *class = getTypeData(classType);
+    const struct ClassType *class = (void *)classType;
     size_t ncons = Vector_size(class->constructors);
     if (ncons == 0 && ngiven == 0) {
         // Implicit default constructor
         *typeptr = ast->type =
             ObjectType(ast->super.loc, safe_strdup(ast->name), Vector());
         char *msg;
-        if (TypeVerify(ast->type, state, &msg)) {
-            print_code_error(stderr, typeLoc(ast->type), msg);
+        if (ast->type->verify(ast->type, state, &msg)) {
+            print_code_error(stderr, ast->type->loc, msg);
             free(msg);
             return 1;
         }
-        setInit(ast->type, 1);
+        ast->type->init = 1;
         return 0;
     }
     for (size_t i = 0; i < ncons; i++) {
@@ -103,7 +103,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             for (size_t j = 0; j < nargs; j++) {
                 Type *givenType = Vector_get(ast->argTypes, j);
                 Type *argType = Vector_get(con, j);
-                if (TypeCompare(givenType, argType, state)) {
+                if (givenType->compare(givenType, argType, state)) {
                     valid = 0;
                     break;
                 }
@@ -113,12 +113,12 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                     safe_strdup(ast->name),
                     Vector());
                 char *msg;
-                if (TypeVerify(ast->type, state, &msg)) {
-                    print_code_error(stderr, typeLoc(ast->type), msg);
+                if (ast->type->verify(ast->type, state, &msg)) {
+                    print_code_error(stderr, ast->type->loc, msg);
                     free(msg);
                     return 1;
                 }
-                setInit(ast->type, 1);
+                ast->type->init = 1;
                 return 0;
             }
         }

@@ -50,7 +50,7 @@ addBuiltins(Map *symbols, Vector *classes, Map *compare) {
         struct Builtin builtin = builtins[i];
         Type *type = ClassType(loc, Vector(), Vector(), Vector(), Map());
         Map_put(state.symbols, builtin.name, strlen(builtin.name), type, NULL);
-        const struct ClassType *class = getTypeData(type);
+        const struct ClassType *class = (void *)type;
         state.builtins[i] = class;
         Vector_append(state.classes, (void *)class);
         Map_put(compare, &class, sizeof(class), Map(), NULL);
@@ -63,7 +63,7 @@ addBuiltins(Map *symbols, Vector *classes, Map *compare) {
         const struct ClassType *class = state.builtins[i];
         if (builtin.toBool) {
             Type *retType = ObjectType(loc, safe_strdup("bool"), Vector());
-            TypeVerify(retType, &state, NULL);
+            retType->verify(retType, &state, NULL);
             Type *fieldType = FuncType(loc, Vector(), Vector(), retType);
             char *fieldName = "=>";
             Map_put(class->fields,
@@ -77,8 +77,8 @@ addBuiltins(Map *symbols, Vector *classes, Map *compare) {
                 ObjectType(loc, safe_strdup(builtin.name), Vector());
             Type *argType =
                 ObjectType(loc, safe_strdup(builtin.name), Vector());
-            TypeVerify(retType, &state, NULL);
-            TypeVerify(argType, &state, NULL);
+            retType->verify(retType, &state, NULL);
+            argType->verify(argType, &state, NULL);
             Vector *args = init_Vector(argType);
             Type *fieldType = FuncType(loc, Vector(), args, retType);
             char *fieldName = "==";
@@ -99,7 +99,7 @@ json_empty(UNUSED const void *value, FILE *out, UNUSED int indent) {
 
 static void
 json_typePtr(const Type **typePtr, UNUSED size_t size, FILE *out) {
-    char *str = typeToString(*typePtr);
+    char *str = (*typePtr)->toString(*typePtr);
     json_label(str, out);
     free(str);
 }
@@ -153,11 +153,10 @@ delete_compare(Map *compare) {
 static void
 delete(void *this) {
     ASTProgram *ast = this;
-    // Delete classes before statements and symbols, because of ownership
-    delete_Vector(ast->classes, (VEC_DELETE_FUNC)delete_ClassType);
     delete_Vector(ast->stmts, (VEC_DELETE_FUNC)delete_AST);
     delete_Map(ast->symbols, (MAP_DELETE_FUNC)delete_type);
     delete_Map(ast->compare, (MAP_DELETE_FUNC)delete_compare);
+    delete_Vector(ast->classes, (VEC_DELETE_FUNC)NULL);
     free(this);
 }
 

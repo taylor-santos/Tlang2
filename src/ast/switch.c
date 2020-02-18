@@ -62,9 +62,9 @@ exprCase(struct Case *c,
     if (c->expr->getType(c->expr, state, &type)) {
         return 1;
     }
-    if (TYPE_OBJECT != typeOf(switchType)) {
-        char *switchName = typeToString(switchType),
-            *exprName = typeToString(type);
+    if (TYPE_OBJECT != switchType->type) {
+        char *switchName = switchType->toString(switchType),
+            *exprName = type->toString(type);
         print_code_error(stderr,
             c->expr->loc,
             "switch expression with type \"%s\" can't be compared to case "
@@ -76,12 +76,12 @@ exprCase(struct Case *c,
         free(exprName);
         return 1;
     }
-    const struct ObjectType *object = getTypeData(switchType);
+    const struct ObjectType *object = (void *)switchType;
     const struct ClassType *class = object->class;
     const char *fieldName = "==";
     Type *fieldType;
     if (Map_get(class->fields, fieldName, strlen(fieldName), &fieldType)) {
-        char *switchName = typeToString(switchType);
+        char *switchName = switchType->toString(switchType);
         print_code_error(stderr,
             c->expr->loc,
             "switch expression with type \"%s\" does not implement the "
@@ -92,10 +92,10 @@ exprCase(struct Case *c,
     }
     // The grammar only allows operators (such as '==') to be functions with
     // one argument.
-    const struct FuncType *func = getTypeData(fieldType);
+    const struct FuncType *func = (void *)fieldType;
     Type *argType = Vector_get(func->args, 0);
-    if (TypeCompare(type, argType, state)) {
-        char *caseTypeName = typeToString(type);
+    if (type->compare(type, argType, state)) {
+        char *caseTypeName = type->toString(type);
         print_code_error(stderr,
             c->expr->loc,
             "switch expression's \"==\" operator does not accept an argument"
@@ -105,8 +105,8 @@ exprCase(struct Case *c,
         return 1;
     }
     Type *retType = func->ret_type;
-    const struct ObjectType *retObj = getTypeData(retType);
-    if (TYPE_OBJECT != typeOf(retType) ||
+    const struct ObjectType *retObj = (void *)retType;
+    if (TYPE_OBJECT != retType->type ||
         retObj->class != state->builtins[BUILTIN_BOOL]) {
         print_code_error(stderr,
             c->expr->loc,
@@ -120,17 +120,17 @@ exprCase(struct Case *c,
 static int
 typeCase(struct Case *c, Type *exprType, TypeCheckState *state) {
     char *msg;
-    if (TypeVerify(c->type.type, state, &msg)) {
+    if (c->type.type->verify(c->type.type, state, &msg)) {
         print_code_error(stderr, c->expr->loc, msg);
         free(msg);
         return 1;
     }
-    setInit(c->type.type, 1);
-    if (0 != TypeCompare(c->type.type, exprType, state)) {
-        char *exprTypeName = typeToString(exprType),
-            *caseTypeName = typeToString(c->type.type);
+    c->type.type->init = 1;
+    if (0 != c->type.type->compare(c->type.type, exprType, state)) {
+        char *exprTypeName = exprType->toString(exprType),
+            *caseTypeName = c->type.type->toString(c->type.type);
         print_code_error(stderr,
-            typeLoc(c->type.type),
+            c->type.type->loc,
             "case type \"%s\" is not a sub-type of switched type \"%s\"",
             caseTypeName,
             exprTypeName);
@@ -180,7 +180,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         struct Case *c = Vector_get(ast->cases, i);
         switch (c->caseType) {
             case CASE_EXPR:
-                if (TYPE_OBJECT != typeOf(exprType)) {
+                if (TYPE_OBJECT != exprType->type) {
                 }
                 status = exprCase(c, exprType, state) || status;
                 break;
@@ -219,7 +219,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
                 // initialized in the outer symbol table, then add it to the
                 // outer init list.
                 if (found) {
-                    setInit(type, 1);
+                    type->init = 1;
                     if (NULL != prevNewInit) {
                         Map_put(prevNewInit,
                             symbol.key,

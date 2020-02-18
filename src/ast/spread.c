@@ -33,8 +33,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &expr_type)) {
         return 1;
     }
-    if (typeOf(expr_type) != TYPE_TUPLE) {
-        char *typeStr = typeToString(expr_type);
+    if (TYPE_TUPLE != expr_type->type) {
+        char *typeStr = expr_type->toString(expr_type);
         print_code_error(stderr,
             ast->expr->loc,
             "spread operator used on non-tuple %s type",
@@ -42,7 +42,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeStr);
         return 1;
     }
-    *typeptr = ast->type = SpreadType(expr_type);
+    *typeptr = ast->type = SpreadType((void *)expr_type);
     return 0;
 }
 

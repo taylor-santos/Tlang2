@@ -36,8 +36,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &funcType)) {
         return 1;
     }
-    if (TYPE_FUNC != typeOf(funcType)) {
-        char *typeName = typeToString(funcType);
+    if (TYPE_FUNC != funcType->type) {
+        char *typeName = funcType->toString(funcType);
         print_code_error(stderr,
             ast->super.loc,
             "function call attempted on non-function \"%s\" expression",
@@ -45,7 +45,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct FuncType *func = getTypeData(funcType);
+    const struct FuncType *func = (void *)funcType;
     size_t ngen = Vector_size(func->generics);
     if (ngen > 0) {
         print_code_error(stderr,
@@ -77,9 +77,9 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             status = 1;
         } else {
             Type *expectType = Vector_get(func->args, i);
-            if (TypeCompare(givenType, expectType, state)) {
-                char *expectName = typeToString(expectType);
-                char *givenName = typeToString(givenType);
+            if (givenType->compare(givenType, expectType, state)) {
+                char *expectName = expectType->toString(expectType);
+                char *givenName = givenType->toString(givenType);
                 print_code_error(stderr,
                     arg->loc,
                     "incompatible argument type: expected \"%s\" but got "
@@ -95,7 +95,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     if (status) {
         return 1;
     }
-    *typeptr = ast->type = copy_type(func->ret_type);
+    *typeptr = ast->type = func->ret_type->copy(func->ret_type);
     return 0;
 }
 

@@ -36,8 +36,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &type)) {
         return 1;
     }
-    if (TYPE_ARRAY != typeOf(type)) {
-        char *typeName = typeToString(type);
+    if (TYPE_ARRAY != type->type) {
+        char *typeName = type->toString(type);
         print_code_error(stderr,
             ast->super.loc,
             "index operator used on non-array object with type \"%s\"",
@@ -45,7 +45,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct ArrayType *array = getTypeData(type);
+    const struct ArrayType *array = (void *)type->type;
     *typeptr = ast->type = MaybeType(ast->super.loc, copy_type(array->type));
     return 0;
 }

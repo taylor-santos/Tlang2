@@ -630,7 +630,7 @@ Type
   : TypeDef
   | Qualifiers TypeDef {
         $$ = $2;
-        setTypeQualifiers($$, $1);
+        $$->qualifiers = $1;
     }
 
 TypeDef
@@ -716,7 +716,8 @@ ArgsOptNamed
 
 TypeOptNamed
   : T_IDENT ':' Type {
-        $$ = NamedType(@$, $1, $3);
+        $$ = $3;
+        free($1);
     }
   | Type
 

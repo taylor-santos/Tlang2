@@ -58,7 +58,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     size_t nargs = Vector_size(ast->args);
     for (size_t i = 0; i < nargs; i++) {
         struct Field *arg = Vector_get(ast->args, i);
-        if (TypeVerify(arg->type, state, &msg)) {
+        if (arg->type->verify(arg->type, state, &msg)) {
             print_code_error(stderr, ast->super.loc, msg);
             free(msg);
             status = 1;
@@ -70,7 +70,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                 char *name = Vector_get(arg->names, j);
                 size_t len = strlen(name);
                 type_copy = copy_type(arg->type);
-                setInit(type_copy, 1);
+                type_copy->init = 1;
                 Type *prev_type = NULL;
                 Map_put(ast->symbols, name, len, type_copy, &prev_type);
                 if (NULL != prev_type) {
@@ -79,8 +79,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             }
         }
     }
-    if (TypeVerify(ast->ret_type, state, &msg)) {
-        print_code_error(stderr, typeLoc(ast->ret_type), msg);
+    if (ast->ret_type->verify(ast->ret_type, state, &msg)) {
+        print_code_error(stderr, ast->ret_type->loc, msg);
         free(msg);
         status = 1;
     }
@@ -102,10 +102,10 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             status = 1;
         }
     }
-    if (TYPE_NONE != typeOf(ast->ret_type) && NULL == state->retType) {
-        char *typeName = typeToString(ast->ret_type);
+    if (TYPE_NONE != ast->ret_type->type && NULL == state->retType) {
+        char *typeName = ast->ret_type->toString(ast->ret_type);
         print_code_error(stderr,
-            typeLoc(ast->ret_type),
+            ast->ret_type->loc,
             "function's return type is \"%s\" but not all code paths return a "
             "value",
             typeName);

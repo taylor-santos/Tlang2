@@ -54,8 +54,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 1;
     }
     nvars = Vector_size(ast->vars);
-    if (typeOf(expr_type) == TYPE_SPREAD) {
-        const struct SpreadType *spread = getTypeData(expr_type);
+    if (TYPE_SPREAD == expr_type->type) {
+        const struct SpreadType *spread = (void *)expr_type->type;
         size_t nspread = SparseVector_count(spread->types);
         if (nvars != nspread) {
             print_code_error(stderr,
@@ -82,9 +82,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                 size_t len = strlen(name);
                 Type *prev_type = NULL;
                 if (!Map_get(state->symbols, name, len, &prev_type)) {
-                    if (TypeCompare(type, prev_type, state)) {
-                        char *oldTypeName = typeToString(prev_type);
-                        char *newTypeName = typeToString(type);
+                    if (type->compare(type, prev_type, state)) {
+                        char *oldTypeName = prev_type->toString(prev_type);
+                        char *newTypeName = type->toString(type);
                         print_code_error(stderr,
                             ast->super.loc,
                             "redefinition of variable \"%s\" from type "
@@ -96,7 +96,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                         free(newTypeName);
                         status = 1;
                     } else {
-                        setInit(prev_type, 1);
+                        prev_type->init = 1;
                         if (NULL != state->newInitSymbols) {
                             Map_put(state->newInitSymbols,
                                 name,
@@ -107,7 +107,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                     }
                 } else {
                     Type *type_copy = copy_type(type);
-                    setInit(type_copy, 1);
+                    type_copy->init = 1;
                     Map_put(state->symbols, name, len, type_copy, NULL);
                 }
                 var_index++;
@@ -124,9 +124,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             size_t len = strlen(name);
             Type *prev_type = NULL;
             if (!Map_get(state->symbols, name, len, &prev_type)) {
-                if (TypeCompare(expr_type, prev_type, state)) {
-                    char *oldTypeName = typeToString(prev_type);
-                    char *newTypeName = typeToString(expr_type);
+                if (expr_type->compare(expr_type, prev_type, state)) {
+                    char *oldTypeName = prev_type->toString(prev_type);
+                    char *newTypeName = expr_type->toString(expr_type);
                     print_code_error(stderr,
                         ast->super.loc,
                         "redefinition of variable \"%s\" from type "
@@ -138,14 +138,14 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                     free(newTypeName);
                     status = 1;
                 } else {
-                    setInit(prev_type, 1);
+                    prev_type->init = 1;
                     if (NULL != state->newInitSymbols) {
                         Map_put(state->newInitSymbols, name, len, NULL, NULL);
                     }
                 }
             } else {
                 Type *type_copy = copy_type(expr_type);
-                setInit(type_copy, 1);
+                type_copy->init = 1;
                 Map_put(state->symbols, name, len, type_copy, NULL);
             }
         }

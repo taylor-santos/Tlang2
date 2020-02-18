@@ -34,8 +34,8 @@ static int
 getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTCast *ast = this;
     char *msg;
-    if (TypeVerify(ast->cast_type, state, &msg)) {
-        print_code_error(stderr, typeLoc(ast->cast_type), msg);
+    if (ast->cast_type->verify(ast->cast_type, state, &msg)) {
+        print_code_error(stderr, ast->cast_type->loc, msg);
         free(msg);
         return 1;
     }
@@ -44,8 +44,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &exprType)) {
         return 1;
     }
-    if (TYPE_OBJECT != typeOf(exprType)) {
-        char *typeName = typeToString(exprType);
+    if (TYPE_OBJECT != exprType->type) {
+        char *typeName = exprType->toString(exprType);
         print_code_error(stderr,
             ast->expr->loc,
             "expression with type \"%s\" does not support casting",
@@ -53,12 +53,12 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct ObjectType *object = getTypeData(exprType);
+    const struct ObjectType *object = (void *)exprType;
     const struct ClassType *class = object->class;
     const char *fieldName = "=>";
     Type *fieldType;
     if (Map_get(class->fields, fieldName, strlen(fieldName), &fieldType)) {
-        char *typeName = typeToString(exprType);
+        char *typeName = exprType->toString(exprType);
         print_code_error(stderr,
             ast->expr->loc,
             "expression with type \"%s\" does not implement a cast operator",
@@ -66,10 +66,10 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct FuncType *func = getTypeData(fieldType);
-    if (TypeCompare(func->ret_type, ast->cast_type, state)) {
-        char *typeName = typeToString(exprType);
-        char *castName = typeToString(ast->cast_type);
+    const struct FuncType *func = (void *)fieldType;
+    if (func->ret_type->compare(func->ret_type, ast->cast_type, state)) {
+        char *typeName = exprType->toString(exprType);
+        char *castName = ast->cast_type->toString(ast->cast_type);
         print_code_error(stderr,
             ast->expr->loc,
             "expression with type \"%s\" does not implement a cast to type "
