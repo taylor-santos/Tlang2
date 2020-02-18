@@ -48,9 +48,18 @@ json(const void *type, FILE *out, int indent) {
 
 static int
 compare(const void *type, const void *otherType, const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_CLASS != other->type) {
+        return 1;
+    }
     const struct ClassType *class1 = type, *class2 = otherType;
-    if (class1 == class2) {
+    if (class1->fields == class2->fields) {
+        // One is a copy of the other if their pointers are the same
         return 0;
+    }
+    Map *compare;
+    if (!Map_get(state->compare, &class1, sizeof(class1), &compare)) {
+        return !Map_contains(compare, &class2, sizeof(class2));
     }
     size_t ngens1 = Vector_size(class1->generics),
         ngens2 = Vector_size(class2->generics);
@@ -117,17 +126,6 @@ delete(void *type) {
         delete_Map(this->fields, (MAP_DELETE_FUNC)delete_type);
     }
     free(this);
-}
-
-void
-delete_ClassType(struct ClassType *class) {
-    if (!class->super.isCopy) {
-        delete_Vector(class->generics, free);
-        delete_Vector(class->supers, free);
-        delete_Vector(class->constructors, (VEC_DELETE_FUNC)delete_cons);
-        delete_Map(class->fields, (MAP_DELETE_FUNC)delete_type);
-    }
-    free(class);
 }
 
 static Type *

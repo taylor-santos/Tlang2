@@ -45,7 +45,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct ArrayType *array = (void *)type->type;
+    const struct ArrayType *array = (const struct ArrayType *)type;
     *typeptr = ast->type = MaybeType(ast->super.loc, copy_type(array->type));
     return 0;
 }

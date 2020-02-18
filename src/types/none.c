@@ -25,7 +25,10 @@ compare(UNUSED const void *type,
     const void *otherType,
     UNUSED const TypeCheckState *state) {
     const Type *other = otherType;
-    return other->type != TYPE_NONE;
+    if (TYPE_NONE != other->type) {
+        return 1;
+    }
+    return 0;
 }
 
 static int

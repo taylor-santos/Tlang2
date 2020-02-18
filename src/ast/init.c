@@ -80,7 +80,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         Vector_append(ast->argTypes, type_copy);
     }
 
-    const struct ClassType *class = (void *)classType;
+    const struct ClassType *class = (const struct ClassType *)classType;
     size_t ncons = Vector_size(class->constructors);
     if (ncons == 0 && ngiven == 0) {
         // Implicit default constructor

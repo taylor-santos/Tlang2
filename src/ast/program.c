@@ -50,9 +50,9 @@ addBuiltins(Map *symbols, Vector *classes, Map *compare) {
         struct Builtin builtin = builtins[i];
         Type *type = ClassType(loc, Vector(), Vector(), Vector(), Map());
         Map_put(state.symbols, builtin.name, strlen(builtin.name), type, NULL);
-        const struct ClassType *class = (void *)type;
+        struct ClassType *class = (struct ClassType *)type;
         state.builtins[i] = class;
-        Vector_append(state.classes, (void *)class);
+        Vector_append(state.classes, class);
         Map_put(compare, &class, sizeof(class), Map(), NULL);
     }
     // Iterate through builtins again to add their fields. Some fields rely

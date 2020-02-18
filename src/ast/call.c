@@ -45,7 +45,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct FuncType *func = (void *)funcType;
+    const struct FuncType *func = (const struct FuncType *)funcType;
     size_t ngen = Vector_size(func->generics);
     if (ngen > 0) {
         print_code_error(stderr,

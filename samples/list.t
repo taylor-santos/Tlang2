@@ -165,7 +165,7 @@ D := class {
     x: int;
     y: string;
 };
-/*
+
 foo := func(x: int) => bool {
     return x => bool;
 };
@@ -177,4 +177,3 @@ foo := func(x: bool) => int {
         return 0;
     }
 };
-*/

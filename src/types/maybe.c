@@ -26,6 +26,10 @@ json(const void *type, FILE *out, int indent) {
 
 static int
 compare(const void *type, const void *otherType, const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_MAYBE != other->type) {
+        return 1;
+    }
     const struct MaybeType *maybe1 = type, *maybe2 = otherType;
     return maybe1->type->compare(maybe1->type, maybe2->type, state);
 }

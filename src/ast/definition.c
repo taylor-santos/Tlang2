@@ -55,7 +55,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     }
     nvars = Vector_size(ast->vars);
     if (TYPE_SPREAD == expr_type->type) {
-        const struct SpreadType *spread = (void *)expr_type->type;
+        const struct SpreadType *spread = (const struct SpreadType *)expr_type;
         size_t nspread = SparseVector_count(spread->types);
         if (nvars != nspread) {
             print_code_error(stderr,

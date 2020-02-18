@@ -2,6 +2,7 @@
 #include "json.h"
 #include "safe.h"
 #include "vector.h"
+#include "dynamic_string.h"
 
 static void
 json(const void *type, FILE *out, int indent) {
@@ -31,6 +32,10 @@ json(const void *type, FILE *out, int indent) {
 
 static int
 compare(const void *type, const void *otherType, const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_FUNC != other->type) {
+        return 1;
+    }
     const struct FuncType *func1 = type, *func2 = otherType;
     size_t ngens1 = Vector_size(func1->generics),
         ngens2 = Vector_size(func2->generics);
@@ -74,8 +79,22 @@ verify(void *type, const TypeCheckState *state, char **msg) {
 }
 
 static char *
-toString(UNUSED const void *type) {
-    return safe_strdup("function");
+toString(const void *type) {
+    const struct FuncType *func = type;
+    dstring str = dstring("func(");
+    char *sep = "";
+    size_t n = Vector_size(func->args);
+    for (size_t i = 0; i < n; i++) {
+        Type *t = Vector_get(func->args, i);
+        char *s = t->toString(t);
+        append_vstr(&str, "%s%s", sep, s);
+        free(s);
+        sep = ",";
+    }
+    char *s = func->ret_type->toString(func->ret_type);
+    append_vstr(&str, ") => %s", s);
+    free(s);
+    return str.str;
 }
 
 static void

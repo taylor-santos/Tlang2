@@ -26,6 +26,10 @@ json(const void *type, FILE *out, int indent) {
 
 static int
 compare(const void *type, const void *otherType, const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_ARRAY != other->type) {
+        return 1;
+    }
     const struct ArrayType *array1 = type, *array2 = otherType;
     return array1->type->compare(array1->type, array2->type, state);
 }

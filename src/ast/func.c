@@ -121,6 +121,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     }
     Type *ret_type = copy_type(ast->ret_type);
     *typeptr = ast->type = FuncType(ast->super.loc, Vector(), args, ret_type);
+    AddComparison(ast->type, state);
     return 0;
 }
 

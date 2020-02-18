@@ -122,9 +122,6 @@ json_qualifier(const Qualifiers *value, FILE *out, int indent);
 void
 delete_type(Type *type);
 
-void
-delete_ClassType(struct ClassType *type);
-
 Type *
 copy_type(Type *type);
 

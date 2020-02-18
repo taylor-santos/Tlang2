@@ -76,7 +76,7 @@ exprCase(struct Case *c,
         free(exprName);
         return 1;
     }
-    const struct ObjectType *object = (void *)switchType;
+    const struct ObjectType *object = (const struct ObjectType *)switchType;
     const struct ClassType *class = object->class;
     const char *fieldName = "==";
     Type *fieldType;
@@ -92,7 +92,7 @@ exprCase(struct Case *c,
     }
     // The grammar only allows operators (such as '==') to be functions with
     // one argument.
-    const struct FuncType *func = (void *)fieldType;
+    const struct FuncType *func = (const struct FuncType *)fieldType;
     Type *argType = Vector_get(func->args, 0);
     if (type->compare(type, argType, state)) {
         char *caseTypeName = type->toString(type);
@@ -105,7 +105,7 @@ exprCase(struct Case *c,
         return 1;
     }
     Type *retType = func->ret_type;
-    const struct ObjectType *retObj = (void *)retType;
+    const struct ObjectType *retObj = (const struct ObjectType *)retType;
     if (TYPE_OBJECT != retType->type ||
         retObj->class != state->builtins[BUILTIN_BOOL]) {
         print_code_error(stderr,

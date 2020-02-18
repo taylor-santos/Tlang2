@@ -29,6 +29,10 @@ json(const void *type, FILE *out, int indent) {
 
 static int
 compare(const void *type, const void *otherType, const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_OBJECT != other->type) {
+        return 1;
+    }
     const struct ObjectType *object1 = type, *object2 = otherType;
     if (object1->class == NULL || object2->class == NULL) {
         print_ICE("Unverified object type\n");
@@ -68,7 +72,7 @@ toString(const void *type) {
     const struct ObjectType *this = type;
     char *typeName, *name;
     if (this->name != NULL) {
-        return safe_asprintf("%s instance", this->name);
+        return safe_strdup(this->name);
     }
     typeName = this->class->super.toString(this->class);
     name = safe_asprintf("%s instance", typeName);

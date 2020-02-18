@@ -42,7 +42,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeStr);
         return 1;
     }
-    *typeptr = ast->type = SpreadType((void *)expr_type);
+    *typeptr = ast->type = SpreadType((struct TupleType *)expr_type);
     return 0;
 }
 

@@ -47,7 +47,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         status = 1;
     } else {
-        const struct ObjectType *object = (void *)condType->type;
+        const struct ObjectType *object = (const struct ObjectType *)condType;
         const struct ClassType *class = object->class;
         const char *fieldName = "=>";
         Type *fieldType;
@@ -61,9 +61,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             free(typeName);
             status = 1;
         } else {
-            const struct FuncType *funcType = (void *)fieldType->type;
+            const struct FuncType
+                *funcType = (const struct FuncType *)fieldType;
             Type *retType = funcType->ret_type;
-            const struct ObjectType *retObj = (void *)retType->type;
+            const struct ObjectType
+                *retObj = (const struct ObjectType *)retType;
             if (TYPE_OBJECT != retType->type ||
                 retObj->class != state->builtins[BUILTIN_BOOL]) {
                 char *typeName = condType->toString(condType);

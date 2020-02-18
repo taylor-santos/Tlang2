@@ -45,7 +45,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct ObjectType *object = (void *)exprType->type;
+    const struct ObjectType *object = (const struct ObjectType *)exprType;
     const struct ClassType *class = object->class;
     Type *fieldType;
     if (Map_get(class->fields, ast->name, strlen(ast->name), &fieldType)) {

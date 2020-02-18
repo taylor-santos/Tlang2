@@ -53,7 +53,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct ObjectType *object = (void *)exprType;
+    const struct ObjectType *object = (const struct ObjectType *)exprType;
     const struct ClassType *class = object->class;
     const char *fieldName = "=>";
     Type *fieldType;
@@ -66,7 +66,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct FuncType *func = (void *)fieldType;
+    const struct FuncType *func = (const struct FuncType *)fieldType;
     if (func->ret_type->compare(func->ret_type, ast->cast_type, state)) {
         char *typeName = exprType->toString(exprType);
         char *castName = ast->cast_type->toString(ast->cast_type);

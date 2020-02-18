@@ -27,8 +27,12 @@ json(const void *type, FILE *out, int indent) {
 
 static int
 compare(UNUSED const void *type,
-    UNUSED const void *otherType,
+    const void *otherType,
     UNUSED const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_TUPLE != other->type) {
+        return 1;
+    }
     print_ICE("TypeCompare not implemented for tuples\n");
     return 1;
 }
