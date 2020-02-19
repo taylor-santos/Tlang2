@@ -63,6 +63,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     }
     ngen = Vector_size(ast->generics);
     if (ngen != 0) {
+        // TODO: generic classes
         print_code_error(stderr,
             ast->super.loc,
             "init with generics not implemented");

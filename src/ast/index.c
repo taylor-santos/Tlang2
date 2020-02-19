@@ -30,6 +30,7 @@ json(const void *this, FILE *out, int indent) {
 
 static int
 getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
+    // TODO: array indexing
     ASTIndex *ast = this;
     print_code_error(stderr,
         ast->super.loc,

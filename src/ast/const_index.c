@@ -36,18 +36,33 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     if (ast->expr->getType(ast->expr, state, &type)) {
         return 1;
     }
-    if (TYPE_ARRAY != type->type) {
-        char *typeName = type->toString(type);
-        print_code_error(stderr,
-            ast->super.loc,
-            "index operator used on non-array object with type \"%s\"",
-            typeName);
-        free(typeName);
-        return 1;
+    if (TYPE_TUPLE == type->type) {
+        const struct TupleType *tuple = (const struct TupleType *)type;
+        unsigned int n = SparseVector_count(tuple->types);
+        if (ast->index < 0 || ast->index >= n) {
+            print_code_error(stderr,
+                ast->super.loc,
+                "tuple indexed at %ld is out of range, tuple has %ld "
+                "elements",
+                ast->index,
+                n);
+            return 1;
+        }
+        SparseVector_at(tuple->types, ast->index, typeptr);
+        return 0;
+    } else if (TYPE_ARRAY == type->type) {
+        const struct ArrayType *array = (const struct ArrayType *)type;
+        *typeptr = ast->type =
+            MaybeType(ast->super.loc, copy_type(array->type));
+        return 0;
     }
-    const struct ArrayType *array = (const struct ArrayType *)type;
-    *typeptr = ast->type = MaybeType(ast->super.loc, copy_type(array->type));
-    return 0;
+    char *typeName = type->toString(type);
+    print_code_error(stderr,
+        ast->super.loc,
+        "index operator used on non-indexable object with type \"%s\"",
+        typeName);
+    free(typeName);
+    return 1;
 }
 
 static void

@@ -89,7 +89,7 @@ toString(const void *type) {
         char *s = t->toString(t);
         append_vstr(&str, "%s%s", sep, s);
         free(s);
-        sep = ",";
+        sep = ", ";
     }
     char *s = func->ret_type->toString(func->ret_type);
     append_vstr(&str, ") => %s", s);

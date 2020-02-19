@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "util.h"
+#include "vector.h"
 
 #define REALLOC_SIZE 8
 
@@ -40,12 +41,8 @@ SparseVector_get(const SparseVector *this,
     size_t index,
     void *element_ptr,
     ull *count_ptr) {
-    if (element_ptr == NULL || count_ptr == NULL) {
-        print_ICE("NULL pointer passed to Vector get().\n");
-        exit(EXIT_FAILURE);
-    }
     if (index >= this->size) {
-        print_ICE("Invalid index passed to Vector get().\n");
+        print_ICE("Invalid index passed to SparseVector get().\n");
         exit(EXIT_FAILURE);
     }
     if (NULL != element_ptr) {
@@ -58,7 +55,7 @@ SparseVector_get(const SparseVector *this,
 }
 
 int
-SparseVector_at(const SparseVector *this, size_t index, void *element_ptr) {
+SparseVector_at(const SparseVector *this, ull index, void *element_ptr) {
     if (element_ptr == NULL) {
         print_ICE("NULL pointer passed to SparseVector get().\n");
         exit(EXIT_FAILURE);
@@ -68,7 +65,7 @@ SparseVector_at(const SparseVector *this, size_t index, void *element_ptr) {
         index -= this->counts[curr_index];
         curr_index++;
         if (curr_index >= this->size) {
-            print_ICE("Invalid index passed to Vector get().\n");
+            print_ICE("Invalid index passed to SparseVector get().\n");
             exit(EXIT_FAILURE);
         }
     }
@@ -81,7 +78,7 @@ SparseVector_size(const SparseVector *this) {
     return this->size;
 }
 
-unsigned int
+unsigned long long int
 SparseVector_count(const SparseVector *this) {
     return this->count;
 }
@@ -89,6 +86,29 @@ SparseVector_count(const SparseVector *this) {
 size_t
 SparseVector_capacity(const SparseVector *this) {
     return this->capacity;
+}
+
+void
+SparseVector_reduce(SparseVector *this,
+    SVEC_COMPARE_FUNC comp,
+    const void *data,
+    SVEC_DELETE_FUNC delete) {
+    size_t currIndex = 0;
+    for (size_t i = 1; i < this->size; i++) {
+        if (comp(this->items[currIndex], this->items[i], data)) {
+            // i and currIndex are different
+            currIndex++;
+            this->items[currIndex] = this->items[i];
+            this->counts[currIndex] = this->counts[i];
+        } else {
+            // i and currIndex are the same
+            this->counts[currIndex] += this->counts[i];
+            if (NULL != delete) {
+                delete(this->items[i]);
+            }
+        }
+    }
+    this->size = currIndex + 1;
 }
 
 SparseVector *

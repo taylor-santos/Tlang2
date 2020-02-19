@@ -148,6 +148,11 @@ foo := func(x: bool) => int {
 
 */
 
+t := (1, 2, 3, 4, "test", 6, 7, 8, 9);
+
+
+_, _, _, _, s, _, _, _, _ := *t;
+
 A := class {
     x: int;
 };
@@ -169,7 +174,7 @@ D := class {
 foo := func(x: int) => bool {
     return x => bool;
 };
-
+/*
 foo := func(x: bool) => int {
     if x {
         return 5;
@@ -177,3 +182,4 @@ foo := func(x: bool) => int {
         return 0;
     }
 };
+*/

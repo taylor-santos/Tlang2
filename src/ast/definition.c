@@ -79,36 +79,38 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             SparseVector_get(spread->types, i, &type, &count);
             for (unsigned long long j = 0; j < count; j++) {
                 char *name = Vector_get(ast->vars, var_index);
-                size_t len = strlen(name);
-                Type *prev_type = NULL;
-                if (!Map_get(state->symbols, name, len, &prev_type)) {
-                    if (type->compare(type, prev_type, state)) {
-                        char *oldTypeName = prev_type->toString(prev_type);
-                        char *newTypeName = type->toString(type);
-                        print_code_error(stderr,
-                            ast->super.loc,
-                            "redefinition of variable \"%s\" from type "
-                            "\"%s\" to type \"%s\"",
-                            name,
-                            oldTypeName,
-                            newTypeName);
-                        free(oldTypeName);
-                        free(newTypeName);
-                        status = 1;
-                    } else {
-                        prev_type->init = 1;
-                        if (NULL != state->newInitSymbols) {
-                            Map_put(state->newInitSymbols,
+                if (NULL != name) {
+                    size_t len = strlen(name);
+                    Type *prev_type = NULL;
+                    if (!Map_get(state->symbols, name, len, &prev_type)) {
+                        if (type->compare(type, prev_type, state)) {
+                            char *oldTypeName = prev_type->toString(prev_type);
+                            char *newTypeName = type->toString(type);
+                            print_code_error(stderr,
+                                ast->super.loc,
+                                "redefinition of variable \"%s\" from type "
+                                "\"%s\" to type \"%s\"",
                                 name,
-                                len,
-                                NULL,
-                                NULL);
+                                oldTypeName,
+                                newTypeName);
+                            free(oldTypeName);
+                            free(newTypeName);
+                            status = 1;
+                        } else {
+                            prev_type->init = 1;
+                            if (NULL != state->newInitSymbols) {
+                                Map_put(state->newInitSymbols,
+                                    name,
+                                    len,
+                                    NULL,
+                                    NULL);
+                            }
                         }
+                    } else {
+                        Type *type_copy = copy_type(type);
+                        type_copy->init = 1;
+                        Map_put(state->symbols, name, len, type_copy, NULL);
                     }
-                } else {
-                    Type *type_copy = copy_type(type);
-                    type_copy->init = 1;
-                    Map_put(state->symbols, name, len, type_copy, NULL);
                 }
                 var_index++;
             }

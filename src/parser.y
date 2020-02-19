@@ -134,9 +134,9 @@
             Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If While
             Switch Do CastExpr
 %type<vec>  OptStatements Statements IdentList OptInherits Inherits OptNamedArgs
-            NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers Tuple DefVars
+            NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers DefVars
             Constructor OptArguments Arguments OptElse OptCases Cases OptDefault
-%type<svec> Types
+%type<svec> Types Tuple
 %type<type> Type TypeDef FuncDef TypeOptNamed
 %type<class> Fields OptFields
 %type<switchCase> Case
@@ -443,11 +443,20 @@ OpExpr
     }
 
 Tuple
-  : OpExpr ',' OpExpr {
-        $$ = Vector_append(init_Vector($1), $3);
+  : OpExpr T_RANGE {
+        $$ = init_SparseVector($1, $2);
+    }
+  | OpExpr ',' OpExpr {
+        $$ = SparseVector_append(init_SparseVector($1, 1), $3, 1);
+    }
+  | OpExpr ',' OpExpr T_RANGE {
+        $$ = SparseVector_append(init_SparseVector($1, 1), $3, $4);
     }
   | Tuple ',' OpExpr {
-        $$ = Vector_append($1, $3);
+        $$ = SparseVector_append($1, $3, 1);
+    }
+  | Tuple ',' OpExpr T_RANGE {
+        $$ = SparseVector_append($1, $3, $4);
     }
 
 Expression

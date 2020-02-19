@@ -9,7 +9,7 @@ typedef struct ASTTuple ASTTuple;
 
 struct ASTTuple {
     AST super;
-    Vector *exprs; // Vector<AST*>
+    SparseVector *exprs; // Vector<AST*>
     Type *type;    // NULL until type checker is executed.
 };
 
@@ -21,22 +21,21 @@ json(const void *this, FILE *out, int indent) {
     json_string("tuple", out, indent);
     json_comma(out, indent);
     json_label("elements", out);
-    json_vector(ast->exprs, (JSON_VALUE_FUNC)json_AST, out, indent);
+    json_sparse_vector(ast->exprs, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
 }
 
 static int
 getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
     ASTTuple *ast = this;
-    SparseVector *types;
-    size_t n;
     int status = 0;
 
-    n = Vector_size(ast->exprs);
-    if (1 == n) {
+    ull count = SparseVector_count(ast->exprs);
+    if (1 == count) {
         //Tuple has single value, flatten it:
+        AST *expr;
+        SparseVector_at(ast->exprs, 0, &expr);
         Type *type;
-        AST *expr = Vector_get(ast->exprs, 0);
         if (expr->getType(expr, state, &type)) {
             return 1;
         }
@@ -44,18 +43,23 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
         return 0;
     }
     //Tuple has multiple values:
-    types = new_SparseVector(n);
+    size_t n = SparseVector_size(ast->exprs);
+    SparseVector *types = new_SparseVector(n);
     for (size_t i = 0; i < n; i++) {
         Type *type, *type_copy;
-
-        AST *expr = Vector_get(ast->exprs, i);
+        AST *expr;
+        SparseVector_get(ast->exprs, i, &expr, &count);
         if (expr->getType(expr, state, &type)) {
             status = 1;
         } else {
             type_copy = copy_type(type);
-            SparseVector_append(types, type_copy, 1);
+            SparseVector_append(types, type_copy, count);
         }
     }
+    SparseVector_reduce(types,
+        (SVEC_COMPARE_FUNC)TypeCompare,
+        state,
+        (SVEC_DELETE_FUNC)delete_type);
     if (0 == status) {
         *typeptr = ast->type = TupleType(ast->super.loc, types);
     }
@@ -65,7 +69,7 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
 static void
 delete(void *this) {
     ASTTuple *ast = this;
-    delete_Vector(ast->exprs, (VEC_DELETE_FUNC)delete_AST);
+    delete_SparseVector(ast->exprs, (SVEC_DELETE_FUNC)delete_AST);
     if (NULL != ast->type) {
         delete_type(ast->type);
     }
@@ -73,7 +77,7 @@ delete(void *this) {
 }
 
 AST *
-new_ASTTuple(YYLTYPE loc, Vector *exprs) {
+new_ASTTuple(YYLTYPE loc, SparseVector *exprs) {
     ASTTuple *tuple = NULL;
 
     tuple = safe_malloc(sizeof(*tuple));

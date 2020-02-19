@@ -31,6 +31,13 @@ copy_type(Type *type) {
     return type->copy(type);
 }
 
+int
+TypeCompare(const Type *type1,
+    const Type *type2,
+    const TypeCheckState *state) {
+    return type1->compare(type1, type2, state);
+}
+
 void
 json_qualifier(const Qualifiers *value, FILE *out, int indent) {
     switch (*value) {

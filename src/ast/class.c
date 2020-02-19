@@ -72,9 +72,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     ncons = Vector_size(ast->cons);
     nfields = Vector_size(ast->fields);
     if (ngen > 0) {
+        // TODO: generic classes
         print_warning("class generics not implemented\n");
     }
     if (nsupers > 0) {
+        // TODO: class inheritance
         print_warning("class inheritance not yet implemented\n");
     }
     for (size_t i = 0; i < ncons; i++) {

@@ -64,6 +64,7 @@ compare(const void *type, const void *otherType, const TypeCheckState *state) {
     size_t ngens1 = Vector_size(class1->generics),
         ngens2 = Vector_size(class2->generics);
     if (ngens1 > 0 || ngens2 > 0) {
+        // TODO: generic classes
         print_ICE("TypeCompare not implemented for generic objects\n");
         return 1;
     }

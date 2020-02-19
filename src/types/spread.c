@@ -29,6 +29,7 @@ static int
 compare(UNUSED const void *type,
     const void *otherType,
     UNUSED const TypeCheckState *state) {
+    // TODO: spread comparison
     const Type *other = otherType;
     if (TYPE_SPREAD != other->type) {
         return 1;
@@ -75,9 +76,6 @@ delete(void *type) {
     struct SpreadType *this = type;
     if (NULL != this->super.qualifiers) {
         delete_Vector(this->super.qualifiers, free);
-    }
-    if (!this->super.isCopy) {
-        delete_SparseVector(this->types, (VEC_DELETE_FUNC)delete_type);
     }
     free(this);
 }

@@ -48,6 +48,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     const struct FuncType *func = (const struct FuncType *)funcType;
     size_t ngen = Vector_size(func->generics);
     if (ngen > 0) {
+        // TODO: generic functions
         print_code_error(stderr,
             ast->super.loc,
             "generic function call type checker not implemented");

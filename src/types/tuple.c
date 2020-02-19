@@ -33,8 +33,37 @@ compare(UNUSED const void *type,
     if (TYPE_TUPLE != other->type) {
         return 1;
     }
-    print_ICE("TypeCompare not implemented for tuples\n");
-    return 1;
+    const struct TupleType *type1 = type, *type2 = otherType;
+    ull count1 = SparseVector_count(type1->types),
+        count2 = SparseVector_count(type2->types);
+    size_t s1 = SparseVector_size(type1->types),
+        s2 = SparseVector_size(type2->types);
+    if (count1 != count2) {
+        return 1;
+    }
+    if (count1 == 0) {
+        return 0;
+    }
+    Type *currType1 = NULL, *currType2 = NULL;
+    ull currCount1 = 0, currCount2 = 0;
+    size_t index1 = 0, index2 = 0;
+    do {
+        if (currCount1 < currCount2) {
+            currCount2 -= currCount1;
+            SparseVector_get(type1->types, index1++, &currType1, &currCount1);
+        } else if (currCount2 < currCount1) {
+            currCount1 -= currCount2;
+            SparseVector_get(type2->types, index2++, &currType2, &currCount2);
+        } else {
+            SparseVector_get(type1->types, index1++, &currType1, &currCount1);
+            SparseVector_get(type2->types, index2++, &currType2, &currCount2);
+        }
+        if (currType1->compare(currType1, currType2, state)) {
+            return 1;
+        }
+    } while (index1 < s1 && index2 < s2);
+
+    return 0;
 }
 
 static int
@@ -48,6 +77,10 @@ verify(void *type, const struct TypeCheckState *state, char **msg) {
             return 1;
         }
     }
+    SparseVector_reduce(tuple->types,
+        (SVEC_COMPARE_FUNC)TypeCompare,
+        state,
+        (SVEC_DELETE_FUNC)delete_type);
     return 0;
 }
 
@@ -64,7 +97,10 @@ toString(const void *type) {
         char *s = t->toString(t);
         append_vstr(&str, "%s%s", sep, s);
         free(s);
-        sep = ",";
+        if (c > 1) {
+            append_vstr(&str, "..%lld", c);
+        }
+        sep = ", ";
     }
     append_str(&str, ")");
     return str.str;
@@ -112,7 +148,6 @@ copy(const void *type) {
 Type *
 new_TupleType(YYLTYPE loc, struct SparseVector *types) {
     struct TupleType *type;
-
     type = safe_malloc(sizeof(*type));
     *type = (struct TupleType){
         {

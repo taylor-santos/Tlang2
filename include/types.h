@@ -125,6 +125,9 @@ delete_type(Type *type);
 Type *
 copy_type(Type *type);
 
+int
+TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
+
 void
 AddComparison(const Type *type, TypeCheckState *state);
 

@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 struct Vector;
+struct SparseVector;
 struct Type;
 struct dstring;
 struct TypeCheckState;
@@ -144,11 +145,6 @@ new_ASTFunc(YYLTYPE loc,
     struct Type *ret_type,
     struct Vector *stmts);
 
-#define ASTNamedType(loc, names, type) \
-    new_ASTNamedType(loc, names, type)
-AST *
-new_ASTNamedType(YYLTYPE loc, struct Vector *names, struct Type *type);
-
 #define ASTTypeStmt(loc, vars, type) \
     new_ASTTypeStmt(loc, vars, type)
 AST *
@@ -165,7 +161,7 @@ new_ASTInit(YYLTYPE loc,
 #define ASTTuple(loc, exprs) \
     new_ASTTuple(loc, exprs)
 AST *
-new_ASTTuple(YYLTYPE loc, struct Vector *exprs);
+new_ASTTuple(YYLTYPE loc, struct SparseVector *exprs);
 
 #define ASTSpread(loc, expr) \
     new_ASTSpread(loc, expr)

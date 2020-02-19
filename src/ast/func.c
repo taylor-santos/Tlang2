@@ -48,6 +48,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 
     size_t ngen = Vector_size(ast->generics);
     if (ngen > 0) {
+        // TODO: generic functions
         print_code_error(stderr,
             ast->super.loc,
             "generic func type checker not implemented");
