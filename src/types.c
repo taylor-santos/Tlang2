@@ -73,3 +73,32 @@ AddComparison(const Type *type, TypeCheckState *state) {
     it->delete(it);
     Map_put(state->compare, &type, sizeof(type), newCompare, NULL);
 }
+
+int
+AddSymbol(const char *symbol,
+    size_t len,
+    Type *type_copy,
+    const TypeCheckState *state) {
+    Type *prev_type = NULL;
+    if (Map_get(state->symbols, symbol, len, &prev_type)) {
+        Map_put(state->symbols, symbol, len, type_copy, NULL);
+        return 0;
+    }
+    if (TYPE_FUNC == prev_type->type && TYPE_FUNC == type_copy->type) {
+        struct FuncType *func1 = (struct FuncType *)prev_type,
+            *func2 = (struct FuncType *)type_copy;
+        while (NULL != func1->next) {
+            func1 = func1->next;
+        }
+        func1->next = func2;
+        return 0;
+    }
+    if (type_copy->compare(type_copy, prev_type, state)) {
+        return 1;
+    }
+    prev_type->init = type_copy->init;
+    if (NULL != state->newInitSymbols) {
+        Map_put(state->newInitSymbols, symbol, len, NULL, NULL);
+    }
+    return 0;
+}

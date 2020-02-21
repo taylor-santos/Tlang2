@@ -10,10 +10,11 @@ typedef struct ASTProgram ASTProgram;
 
 struct ASTProgram {
     AST super;
-    Vector *stmts;   // Vector<AST*>
-    Map *symbols;    // Map<char*, Type*>
-    Vector *classes; // Vector<const struct ClassType*>
-    Map *compare;    // Map<Type**, Map<Type**, int>>
+    Vector *stmts;     // Vector<AST*>
+    Map *symbols;      // Map<char*, Type*>
+    Vector *classes;   // Vector<const struct ClassType*>
+    Vector *functions; // Vector<const struct FuncType*>
+    Map *compare;      // Map<Type**, Map<Type**, int>>
 };
 
 static void
@@ -39,9 +40,11 @@ struct Builtin {
 };
 
 static TypeCheckState
-addBuiltins(Map *symbols, Vector *classes, Map *compare) {
+addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
     TypeCheckState state = {
-        symbols, NULL, classes, { NULL }, compare, NULL, NULL
+        symbols, NULL, classes, functions, {
+            NULL
+        }, compare, NULL, NULL
     };
     YYLTYPE loc = {
         0
@@ -81,6 +84,7 @@ addBuiltins(Map *symbols, Vector *classes, Map *compare) {
             argType->verify(argType, &state, NULL);
             Vector *args = init_Vector(argType);
             Type *fieldType = FuncType(loc, Vector(), args, retType);
+            Vector_append(state.functions, fieldType);
             char *fieldName = "==";
             Map_put(class->fields,
                 fieldName,
@@ -119,8 +123,8 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     size_t n;
     int status = 0;
 
-    TypeCheckState
-        new_state = addBuiltins(ast->symbols, ast->classes, ast->compare);
+    TypeCheckState new_state =
+        addBuiltins(ast->symbols, ast->classes, ast->functions, ast->compare);
     n = Vector_size(ast->stmts);
     for (size_t i = 0; i < n; i++) {
         AST *stmt = Vector_get(ast->stmts, i);
@@ -141,6 +145,9 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
             (JSON_VALUE_FUNC)json_compare,
             stdout,
             0);
+        fprintf(stdout, "\n");
+        fprintf(stdout, "Functions:\n");
+        json_vector(ast->functions, (JSON_VALUE_FUNC)json_type, stdout, 0);
     }
     return status;
 }
@@ -156,7 +163,8 @@ delete(void *this) {
     delete_Vector(ast->stmts, (VEC_DELETE_FUNC)delete_AST);
     delete_Map(ast->symbols, (MAP_DELETE_FUNC)delete_type);
     delete_Map(ast->compare, (MAP_DELETE_FUNC)delete_compare);
-    delete_Vector(ast->classes, (VEC_DELETE_FUNC)NULL);
+    delete_Vector(ast->classes, (VEC_DELETE_FUNC)delete_ClassType);
+    delete_Vector(ast->functions, NULL);
     free(this);
 }
 
@@ -164,14 +172,20 @@ AST *
 new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     ASTProgram *program = NULL;
     Map *symbols, *compare;
-    Vector *classes;
+    Vector *classes, *functions;
 
     program = safe_malloc(sizeof(*program));
     symbols = Map();
     classes = Vector();
+    functions = Vector();
     compare = Map();
     *program = (ASTProgram){
-        { json, getType, delete, loc }, stmts, symbols, classes, compare
+        { json, getType, delete, loc },
+        stmts,
+        symbols,
+        classes,
+        functions,
+        compare
     };
     return (AST *)program;
 }

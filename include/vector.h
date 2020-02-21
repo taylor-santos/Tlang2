@@ -41,6 +41,9 @@ Vector_size(const Vector *this);
 size_t
 Vector_capacity(const Vector *this);
 
+void
+Vector_clear(Vector *this, VEC_DELETE_FUNC delete_value);
+
 Vector *
 new_Vector(size_t size);
 

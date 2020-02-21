@@ -115,8 +115,11 @@ delete_cons(Vector *cons) {
 }
 
 static void
-delete(void *type) {
-    struct ClassType *this = type;
+delete(UNUSED void *type) {
+}
+
+void
+delete_ClassType(struct ClassType *this) {
     if (NULL != this->super.qualifiers) {
         delete_Vector(this->super.qualifiers, free);
     }
@@ -131,6 +134,7 @@ delete(void *type) {
 
 static Type *
 copy(const void *type) {
+    return (Type *)type;
     const struct ClassType *this = type;
     struct ClassType *type_copy = safe_malloc(sizeof(*type_copy));
     Vector *qualifiers = NULL;

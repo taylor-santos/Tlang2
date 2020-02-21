@@ -42,6 +42,16 @@ Vector_capacity(const Vector *this) {
     return this->capacity;
 }
 
+void
+Vector_clear(Vector *this, VEC_DELETE_FUNC delete_value) {
+    if (NULL != delete_value) {
+        for (size_t i = 0; i < this->size; i++) {
+            delete_value(this->items[i]);
+        }
+    }
+    this->size = 0;
+}
+
 Vector *
 new_Vector(size_t size) {
     Vector *this;

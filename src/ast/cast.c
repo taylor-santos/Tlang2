@@ -66,22 +66,25 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         free(typeName);
         return 1;
     }
-    const struct FuncType *func = (const struct FuncType *)fieldType;
-    if (func->ret_type->compare(func->ret_type, ast->cast_type, state)) {
-        char *typeName = exprType->toString(exprType);
-        char *castName = ast->cast_type->toString(ast->cast_type);
-        print_code_error(stderr,
-            ast->expr->loc,
-            "expression with type \"%s\" does not implement a cast to type "
-            "\"%s\"",
-            typeName,
-            castName);
-        free(typeName);
-        free(castName);
-        return 1;
+    for (struct FuncType *func = (struct FuncType *)fieldType;
+        NULL != func;
+        func = func->next) {
+        if (!func->ret_type->compare(func->ret_type, ast->cast_type, state)) {
+            // Found right cast
+            *typeptr = ast->cast_type;
+            return 0;
+        }
     }
-    *typeptr = ast->cast_type;
-    return 0;
+    char *typeName = exprType->toString(exprType);
+    char *castName = ast->cast_type->toString(ast->cast_type);
+    print_code_error(stderr,
+        ast->expr->loc,
+        "expression with type \"%s\" does not implement a cast to type \"%s\"",
+        typeName,
+        castName);
+    free(typeName);
+    free(castName);
+    return 1;
 }
 
 static void

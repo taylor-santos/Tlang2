@@ -38,7 +38,7 @@ compare(const void *type, const void *otherType, const TypeCheckState *state) {
         print_ICE("Unverified object type\n");
         exit(EXIT_FAILURE);
     }
-    if (object1->class == object2->class) {
+    if (object1->class->fields == object2->class->fields) {
         return 0;
     }
     const struct ClassType *class1 = object1->class, *class2 = object2->class;

@@ -76,7 +76,7 @@ new_NoneType(YYLTYPE loc) {
     type = safe_malloc(sizeof(*type));
     *type = (struct NoneType){
         {
-            json, copy, compare, verify, toString, delete, TYPE_TUPLE, NULL, 0, 0, loc
+            json, copy, compare, verify, toString, delete, TYPE_NONE, NULL, 0, 0, loc
         }
     };
     return (Type *)type;

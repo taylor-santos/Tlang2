@@ -5,6 +5,27 @@
 #include "dynamic_string.h"
 
 static void
+json_overload(const void *overload, FILE *out, int indent) {
+    const struct FuncType *this = overload;
+    json_start(out, &indent);
+    json_label("generics", out);
+    json_vector(this->generics, (JSON_VALUE_FUNC)json_string, out, indent);
+    json_comma(out, indent);
+    json_label("args", out);
+    json_vector(this->args, (JSON_VALUE_FUNC)json_type, out, indent);
+    json_comma(out, indent);
+    json_label("return type", out);
+    json_type(this->ret_type, out, indent);
+    json_end(out, &indent);
+}
+
+static const void *
+next_overload(const void *overload) {
+    const struct FuncType *this = overload;
+    return this->next;
+}
+
+static void
 json(const void *type, FILE *out, int indent) {
     const struct FuncType *this = type;
     json_start(out, &indent);
@@ -19,24 +40,15 @@ json(const void *type, FILE *out, int indent) {
             indent);
     }
     json_comma(out, indent);
-    json_label("generics", out);
-    json_vector(this->generics, (JSON_VALUE_FUNC)json_string, out, indent);
-    json_comma(out, indent);
-    json_label("args", out);
-    json_vector(this->args, (JSON_VALUE_FUNC)json_type, out, indent);
-    json_comma(out, indent);
-    json_label("return type", out);
-    json_type(this->ret_type, out, indent);
+    json_label("overloads", out);
+    json_linked_list(this, json_overload, next_overload, out, indent);
     json_end(out, &indent);
 }
 
 static int
-compare(const void *type, const void *otherType, const TypeCheckState *state) {
-    const Type *other = otherType;
-    if (TYPE_FUNC != other->type) {
-        return 1;
-    }
-    const struct FuncType *func1 = type, *func2 = otherType;
+compare_overload(const struct FuncType *func1,
+    const struct FuncType *func2,
+    const TypeCheckState *state) {
     size_t ngens1 = Vector_size(func1->generics),
         ngens2 = Vector_size(func2->generics);
     if (ngens1 > 0 || ngens2 > 0) {
@@ -66,8 +78,34 @@ compare(const void *type, const void *otherType, const TypeCheckState *state) {
 }
 
 static int
-verify(void *type, const TypeCheckState *state, char **msg) {
-    struct FuncType *func = type;
+compare(const void *type, const void *otherType, const TypeCheckState *state) {
+    const Type *other = otherType;
+    if (TYPE_FUNC != other->type) {
+        return 1;
+    }
+    for (const struct FuncType *func2 = otherType;
+        NULL != func2;
+        func2 = func2->next) {
+        int found = 0;
+        for (const struct FuncType *func1 = type;
+            NULL != func1;
+            func1 = func1->next) {
+            if (!compare_overload(func1, func2, state)) {
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int
+verify_overload(struct FuncType *func,
+    const TypeCheckState *state,
+    char **msg) {
     size_t nargs = Vector_size(func->args);
     for (size_t i = 0; i < nargs; i++) {
         Type *argType = Vector_get(func->args, i);
@@ -78,22 +116,43 @@ verify(void *type, const TypeCheckState *state, char **msg) {
     return func->ret_type->verify(func->ret_type, state, msg);
 }
 
-static char *
-toString(const void *type) {
-    const struct FuncType *func = type;
-    dstring str = dstring("func(");
+static int
+verify(void *type, const TypeCheckState *state, char **msg) {
+    for (struct FuncType *f = type; NULL != f; f = f->next) {
+        if (verify_overload(f, state, msg)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void
+overload_toString(const struct FuncType *func, dstring *str) {
+    append_str(str, "func(");
     char *sep = "";
     size_t n = Vector_size(func->args);
     for (size_t i = 0; i < n; i++) {
         Type *t = Vector_get(func->args, i);
         char *s = t->toString(t);
-        append_vstr(&str, "%s%s", sep, s);
+        append_vstr(str, "%s%s", sep, s);
         free(s);
         sep = ", ";
     }
     char *s = func->ret_type->toString(func->ret_type);
-    append_vstr(&str, ") => %s", s);
+    append_vstr(str, ") => %s", s);
     free(s);
+}
+
+static char *
+toString(const void *type) {
+    dstring str = dstring("{");
+    char *sep = "";
+    for (const struct FuncType *func = type; NULL != func; func = func->next) {
+        append_str(&str, sep);
+        overload_toString(func, &str);
+        sep = ", ";
+    }
+    append_str(&str, "}");
     return str.str;
 }
 
@@ -108,17 +167,24 @@ delete(void *type) {
         delete_Vector(this->args, (VEC_DELETE_FUNC)delete_type);
         delete_type(this->ret_type);
     }
+    if (NULL != this->next) {
+        delete(this->next);
+    }
     free(this);
 }
 
 static Type *
 copy(const void *type) {
     const struct FuncType *this = type;
+    struct FuncType *next_copy = NULL;
     struct FuncType *type_copy = safe_malloc(sizeof(*type_copy));
     Vector *qualifiers = NULL;
     if (NULL != this->super.qualifiers) {
         qualifiers = copy_Vector(this->super.qualifiers,
             (VEC_COPY_FUNC)copy_Qualifiers);
+    }
+    if (NULL != this->next) {
+        next_copy = (struct FuncType *)copy(this->next);
     }
     *type_copy = (struct FuncType){
         {
@@ -133,7 +199,7 @@ copy(const void *type) {
             this->super.init,
             1,
             this->super.loc
-        }, this->generics, this->args, this->ret_type
+        }, this->generics, this->args, this->ret_type, next_copy
     };
     return (Type *)type_copy;
 }
@@ -156,7 +222,7 @@ new_FuncType(YYLTYPE loc, Vector *generics, Vector *args, Type *ret_type) {
             0,
             0,
             loc
-        }, generics, args, ret_type
+        }, generics, args, ret_type, NULL
     };
     return (Type *)type;
 }

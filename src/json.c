@@ -150,3 +150,25 @@ json_sparse_vector(const SparseVector *list,
     }
     fprintf(out, "]");
 }
+
+void
+json_linked_list(const void *list,
+    void(*json)(const void *, FILE *, int),
+    const void *(*next)(const void *),
+    FILE *out,
+    int indent) {
+    fprintf(out, "[");
+    if (NULL != list) {
+        char *sep = "\n";
+        while (NULL != list) {
+            fprintf(out, "%s", sep);
+            sep = ",\n";
+            print_indent(out, indent + 1);
+            json(list, out, indent + 1);
+            list = next(list);
+        }
+        fprintf(out, "\n");
+        print_indent(out, indent);
+    }
+    fprintf(out, "]");
+}

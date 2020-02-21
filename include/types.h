@@ -49,6 +49,7 @@ struct FuncType {
     struct Vector *generics; // Vector<char*>
     struct Vector *args;     // Vector<Type*>
     Type *ret_type;
+    struct FuncType *next;   // NULLable
 };
 
 struct ClassType {
@@ -102,7 +103,8 @@ typedef struct TypeCheckState {
     // NULL and allocation and destruction must be handled by the control
     // flow AST node.
     struct Map *newInitSymbols; // Map<char*, NULL>
-    struct Vector *classes; // Vector<const struct ClassType*>
+    struct Vector *classes;     // Vector<const struct ClassType*>
+    struct Vector *functions;   // Vector<const struct FuncType*>
     const struct ClassType *builtins[NUM_BUILTINS];
     struct Map *compare; // Map<Type**, Map<Type**, int>>
     // NULL if not in function, otherwise return type of current function
@@ -122,6 +124,9 @@ json_qualifier(const Qualifiers *value, FILE *out, int indent);
 void
 delete_type(Type *type);
 
+void
+delete_ClassType(struct ClassType *this);
+
 Type *
 copy_type(Type *type);
 
@@ -130,6 +135,21 @@ TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
 
 void
 AddComparison(const Type *type, TypeCheckState *state);
+
+/*
+ * Add a symbol and its type to the state's symbol table. If there is a name
+ * conflict, returns 1. Otherwise, returns 0.
+ * If the symbol already exists, is a function, and the added type is also a
+ * function, combines the two functions into one overloaded symbol. This
+ * means f(int) and f(bool) can both refer to unique functions under the
+ * same symbol "f". In this case, the passed type is freed by the AddSymbol
+ * function.
+ */
+int
+AddSymbol(const char *symbol,
+    size_t len,
+    Type *type,
+    const TypeCheckState *state);
 
 #define FuncType(loc, gen, args, ret) \
     new_FuncType(loc, gen, args, ret)

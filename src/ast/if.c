@@ -70,18 +70,27 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             free(typeName);
             status = 1;
         } else {
-            const struct FuncType
-                *funcType = (const struct FuncType *)fieldType;
-            Type *retType = funcType->ret_type;
-            const struct ObjectType
-                *retObj = (const struct ObjectType *)retType;
-            if (TYPE_OBJECT != retType->type ||
-                retObj->class != state->builtins[BUILTIN_BOOL]) {
+            int found = 0;
+            for (struct FuncType *func = (struct FuncType *)fieldType;
+                NULL != func;
+                func = func->next) {
+                const struct ObjectType
+                    *ret = (const struct ObjectType *)func->ret_type;
+                if (TYPE_OBJECT == func->ret_type->type &&
+                    !ret->class->super.compare(ret->class,
+                        state->builtins[BUILTIN_BOOL],
+                        state)) {
+                    // Found right cast
+                    found = 1;
+                    break;
+                }
+            }
+            if (!found) {
                 char *typeName = condType->toString(condType);
                 print_code_error(stderr,
                     ast->cond->loc,
-                    "conditional expression with type \"%s\" does not implement"
-                    " an explicit cast to bool",
+                    "expression with type \"%s\" does not implement a cast "
+                    "to type \"bool\"",
                     typeName);
                 free(typeName);
                 status = 1;

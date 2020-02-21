@@ -49,4 +49,11 @@ json_sparse_vector(const struct SparseVector *list,
     FILE *out,
     int indent);
 
+void
+json_linked_list(const void *list,
+    void(*json)(const void *, FILE *, int),
+    const void *(*next)(const void *),
+    FILE *out,
+    int indent);
+
 #endif

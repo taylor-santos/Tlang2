@@ -147,7 +147,7 @@ foo := func(x: bool) => int {
 };
 
 */
-
+/*
 t := (1, 2, 3, 4, "test", 6, 7, 8, 9);
 
 
@@ -174,7 +174,7 @@ D := class {
 foo := func(x: int) => bool {
     return x => bool;
 };
-/*
+
 foo := func(x: bool) => int {
     if x {
         return 5;
@@ -183,3 +183,17 @@ foo := func(x: bool) => int {
     }
 };
 */
+f := func(d: double) => none {};
+x := 5;
+g := func(a: int, b: int) => int { return a; };
+if true {
+    f := func(i: int) => int {
+        return i;
+    };
+    f(x);
+    (func(x: int) => func(int) => int {
+        return func(y: int) => int {
+            return g(x, y);
+        };
+    })(5);
+}

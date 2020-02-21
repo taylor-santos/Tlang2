@@ -90,11 +90,17 @@ exprCase(struct Case *c,
         free(switchName);
         return 1;
     }
-    // The grammar only allows operators (such as '==') to be functions with
-    // one argument.
-    const struct FuncType *func = (const struct FuncType *)fieldType;
-    Type *argType = Vector_get(func->args, 0);
-    if (type->compare(type, argType, state)) {
+    struct FuncType *found = NULL;
+    for (struct FuncType *func = (struct FuncType *)fieldType;
+        NULL != func;
+        func = func->next) {
+        Type *argType = Vector_get(func->args, 0);
+        if (!type->compare(type, argType, state)) {
+            found = func;
+            continue;
+        }
+    }
+    if (NULL == found) {
         char *caseTypeName = type->toString(type);
         print_code_error(stderr,
             c->expr->loc,
@@ -104,10 +110,11 @@ exprCase(struct Case *c,
         free(caseTypeName);
         return 1;
     }
-    Type *retType = func->ret_type;
-    const struct ObjectType *retObj = (const struct ObjectType *)retType;
-    if (TYPE_OBJECT != retType->type ||
-        retObj->class != state->builtins[BUILTIN_BOOL]) {
+    Type *retType = found->ret_type;
+    const struct ObjectType *ret = (const struct ObjectType *)retType;
+    if (TYPE_OBJECT != retType->type || ret->class->super.compare(ret->class,
+        state->builtins[BUILTIN_BOOL],
+        state)) {
         print_code_error(stderr,
             c->expr->loc,
             "switch expression's \"==\" operator does not return a \"boolean"
