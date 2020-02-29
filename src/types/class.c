@@ -6,8 +6,8 @@
 #include "dynamic_string.h"
 
 static void
-json_constructor(Vector *cons, FILE *out, int indent) {
-    json_vector(cons, (JSON_VALUE_FUNC)json_type, out, indent);
+json_ctor(Vector *ctor, FILE *out, int indent) {
+    json_vector(ctor, (JSON_VALUE_FUNC)json_type, out, indent);
 }
 
 static void
@@ -32,10 +32,7 @@ json(const void *type, FILE *out, int indent) {
     json_vector(this->supers, (JSON_VALUE_FUNC)json_string, out, indent);
     json_comma(out, indent);
     json_label("constructors", out);
-    json_vector(this->constructors,
-        (JSON_VALUE_FUNC)json_constructor,
-        out,
-        indent);
+    json_vector(this->ctors, (JSON_VALUE_FUNC)json_ctor, out, indent);
     json_comma(out, indent);
     json_label("fields", out);
     json_Map(this->fields,
@@ -110,11 +107,6 @@ toString(const void *type) {
 }
 
 static void
-delete_cons(Vector *cons) {
-    delete_Vector(cons, (VEC_DELETE_FUNC)delete_type);
-}
-
-static void
 delete(UNUSED void *type) {
 }
 
@@ -126,7 +118,7 @@ delete_ClassType(struct ClassType *this) {
     if (!this->super.isCopy) {
         delete_Vector(this->generics, free);
         delete_Vector(this->supers, free);
-        delete_Vector(this->constructors, (VEC_DELETE_FUNC)delete_cons);
+        delete_Vector(this->ctors, (VEC_DELETE_FUNC)delete_ctor);
         delete_Map(this->fields, (MAP_DELETE_FUNC)delete_type);
     }
     free(this);
@@ -155,7 +147,7 @@ copy(const void *type) {
             this->super.init,
             1,
             this->super.loc
-        }, this->generics, this->supers, this->constructors, this->fields
+        }, this->generics, this->supers, this->ctors, this->fields
     };
     return (Type *)type_copy;
 }
@@ -164,7 +156,7 @@ Type *
 new_ClassType(YYLTYPE loc,
     struct Vector *generics,
     struct Vector *supers,
-    struct Vector *cons,
+    struct Vector *ctors,
     struct Map *fields) {
     struct ClassType *type;
 
@@ -182,7 +174,7 @@ new_ClassType(YYLTYPE loc,
             0,
             0,
             loc
-        }, generics, supers, cons, fields
+        }, generics, supers, ctors, fields
     };
     return (Type *)type;
 }

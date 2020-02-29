@@ -56,7 +56,7 @@ struct ClassType {
     Type super;
     struct Vector *generics;     // Vector<char*>
     struct Vector *supers;       // Vector<char*>
-    struct Vector *constructors; // Vector<Vector<Type*>>
+    struct Vector *ctors; // Vector<Vector<Type*>>
     struct Map *fields;          // Map<char*, Type*>
 };
 
@@ -159,13 +159,13 @@ new_FuncType(YYLTYPE loc,
     struct Vector *args,
     Type *ret_type);
 
-#define ClassType(loc, gen, sup, cons, fields) \
-    new_ClassType(loc, gen, sup, cons, fields)
+#define ClassType(loc, gen, sup, ctors, fields) \
+    new_ClassType(loc, gen, sup, ctors, fields)
 Type *
 new_ClassType(YYLTYPE loc,
     struct Vector *generics,
     struct Vector *supers,
-    struct Vector *cons,
+    struct Vector *ctors,
     struct Map *fields);
 
 #define ObjectType(loc, name, gen) \

@@ -82,8 +82,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     }
 
     const struct ClassType *class = (const struct ClassType *)classType;
-    size_t ncons = Vector_size(class->constructors);
-    if (ncons == 0 && ngiven == 0) {
+    size_t nctors = Vector_size(class->ctors);
+    if (nctors == 0 && ngiven == 0) {
         // Implicit default constructor
         *typeptr = ast->type =
             ObjectType(ast->super.loc, safe_strdup(ast->name), Vector());
@@ -96,14 +96,14 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         ast->type->init = 1;
         return 0;
     }
-    for (size_t i = 0; i < ncons; i++) {
-        Vector *con = Vector_get(class->constructors, i);
-        size_t nargs = Vector_size(con);
+    for (size_t i = 0; i < nctors; i++) {
+        Vector *ctor = Vector_get(class->ctors, i);
+        size_t nargs = Vector_size(ctor);
         if (nargs == ngiven) {
             int valid = 1;
             for (size_t j = 0; j < nargs; j++) {
                 Type *givenType = Vector_get(ast->argTypes, j);
-                Type *argType = Vector_get(con, j);
+                Type *argType = Vector_get(ctor, j);
                 if (givenType->compare(givenType, argType, state)) {
                     valid = 0;
                     break;

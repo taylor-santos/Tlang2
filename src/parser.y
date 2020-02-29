@@ -480,7 +480,7 @@ OptFields
   : %empty {
         $$ = safe_malloc(sizeof(*$$));
         $$->fields = Vector();
-        $$->constructors = Vector();
+        $$->ctors = Vector();
     }
   | Fields
 
@@ -488,17 +488,17 @@ Fields
   : Field ';' {
         $$ = safe_malloc(sizeof(*$$));
         $$->fields = init_Vector($1);
-        $$->constructors = Vector();
+        $$->ctors = Vector();
     }
   | Constructor ';' {
         $$ = safe_malloc(sizeof(*$$));
         $$->fields = Vector();
-        $$->constructors = init_Vector($1);
+        $$->ctors = init_Vector($1);
     }
   | Operator ';' {
         $$ = safe_malloc(sizeof(*$$));
         $$->fields = init_Vector($1);
-        $$->constructors = Vector();
+        $$->ctors = Vector();
     }
   | Fields Field ';' {
         $$ = $1;
@@ -506,7 +506,7 @@ Fields
     }
   | Fields Constructor ';' {
         $$ = $1;
-        $$->constructors = Vector_append($$->constructors, $2);
+        $$->ctors = Vector_append($$->ctors, $2);
     }
   | Fields Operator ';' {
         $$ = $1;

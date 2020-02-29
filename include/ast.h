@@ -34,7 +34,7 @@ struct Field {
 
 struct ClassBody {
     struct Vector *fields;       // Vector<Field*>
-    struct Vector *constructors; // Vector<AST*>
+    struct Vector *ctors; // Vector<AST*>
 };
 
 struct Case {
@@ -75,6 +75,9 @@ delete_field(struct Field *field);
 
 void
 delete_case(struct Case *c);
+
+void
+delete_ctor(struct Vector *ctor);
 
 void
 delete_AST(AST *this);
