@@ -68,21 +68,11 @@ handle_spread(const struct SpreadType *spread,
             char *name = Vector_get(ast->vars, var_index);
             if (NULL != name) {
                 size_t len = strlen(name);
-                Type *type_copy = copy_type(type);
-                type_copy->init = 1;
-                if (AddSymbol(name, len, type_copy, state)) {
-                    char *oldTypeName = type->toString(type);
-                    char *newTypeName = type_copy->toString(type_copy);
-                    print_code_error(stderr,
-                        ast->super.loc,
-                        "redefinition of variable \"%.*s\" from type "
-                        "\"%s\" to type \"%s\"",
-                        (int)len,
-                        name,
-                        oldTypeName,
-                        newTypeName);
-                    free(oldTypeName);
-                    free(newTypeName);
+                type->init = 1;
+                char *msg;
+                if (AddSymbol(name, len, type, state, &msg)) {
+                    print_code_error(stderr, ast->super.loc, msg);
+                    free(msg);
                     status = 1;
                 }
             }
@@ -121,21 +111,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         if (name != NULL) {
             //Not an ignored variable (_)
             size_t len = strlen(name);
-            Type *type_copy = copy_type(expr_type);
-            type_copy->init = 1;
-            if (AddSymbol(name, len, type_copy, state)) {
-                char *oldTypeName = expr_type->toString(expr_type);
-                char *newTypeName = type_copy->toString(type_copy);
-                print_code_error(stderr,
-                    ast->super.loc,
-                    "redefinition of variable \"%.*s\" from type "
-                    "\"%s\" to type \"%s\"",
-                    (int)len,
-                    name,
-                    oldTypeName,
-                    newTypeName);
-                free(oldTypeName);
-                free(newTypeName);
+            expr_type->init = 1;
+            char *msg;
+            if (AddSymbol(name, len, expr_type, state, &msg)) {
+                print_code_error(stderr, ast->super.loc, msg);
+                free(msg);
                 status = 1;
             }
         }

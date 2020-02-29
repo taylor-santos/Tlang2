@@ -48,7 +48,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     const struct ObjectType *object = (const struct ObjectType *)exprType;
     const struct ClassType *class = object->class;
     Type *fieldType;
-    if (Map_get(class->fields, ast->name, strlen(ast->name), &fieldType)) {
+    if (Map_get(class->fieldTypes, ast->name, strlen(ast->name), &fieldType)) {
         char *typeName = exprType->toString(exprType);
         print_code_error(stderr,
             ast->super.loc,

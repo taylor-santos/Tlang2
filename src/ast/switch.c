@@ -80,7 +80,7 @@ exprCase(struct Case *c,
     const struct ClassType *class = object->class;
     const char *fieldName = "==";
     Type *fieldType;
-    if (Map_get(class->fields, fieldName, strlen(fieldName), &fieldType)) {
+    if (Map_get(class->fieldTypes, fieldName, strlen(fieldName), &fieldType)) {
         char *switchName = switchType->toString(switchType);
         print_code_error(stderr,
             c->expr->loc,

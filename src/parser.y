@@ -74,7 +74,7 @@
     AST *ast;
     Vector *vec;
     struct Field *field;
-    struct ClassBody *class;
+    struct ClassBody class;
     struct Case *switchCase;
     SparseVector *svec;
     char *str;
@@ -130,14 +130,14 @@
                    T_INDEX      "index operator"
 %token<double_lit> T_DOUBLE     "double literal"
 
-%type<ast>  File Statement Definition Expression Class Return OptExpression Func
+%type<ast>  File Statement Definition Expression Return OptExpression Func
             Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If While
             Switch Do CastExpr
 %type<vec>  OptStatements Statements IdentList OptInherits Inherits OptNamedArgs
             NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers DefVars
             Constructor OptArguments Arguments OptElse OptCases Cases OptDefault
 %type<svec> Types Tuple
-%type<type> Type TypeDef FuncDef TypeOptNamed
+%type<type> Type TypeDef FuncDef ClassDef TypeOptNamed
 %type<class> Fields OptFields
 %type<switchCase> Case
 %type<field> Field Operator
@@ -308,7 +308,6 @@ PrimaryExpr
     }
   | Init
   | Func
-  | Class
 
 PostfixExpr
   : PrimaryExpr
@@ -468,49 +467,45 @@ Expression
   | UnaryExpr T_ADD_ASSIGN Expression
   | UnaryExpr T_SUB_ASSIGN Expression
 
-Class
+ClassDef
   : T_CLASS OptInherits '{' OptFields '}' {
-        $$ = ASTClass(@$, Vector(), $2, $4);
+        $$ = ClassType(@$, Vector(), $2, $4.fields, $4.ctors);
     }
   | '<' IdentList '>' T_CLASS OptInherits '{' OptFields '}' {
-        $$ = ASTClass(@$, $2, $5, $7);
+        $$ = ClassType(@$, $2, $5, $7.fields, $7.ctors);
     }
 
 OptFields
   : %empty {
-        $$ = safe_malloc(sizeof(*$$));
-        $$->fields = Vector();
-        $$->ctors = Vector();
+        $$.fields = Vector();
+        $$.ctors = Vector();
     }
   | Fields
 
 Fields
   : Field ';' {
-        $$ = safe_malloc(sizeof(*$$));
-        $$->fields = init_Vector($1);
-        $$->ctors = Vector();
+        $$.fields = init_Vector($1);
+        $$.ctors = Vector();
     }
   | Constructor ';' {
-        $$ = safe_malloc(sizeof(*$$));
-        $$->fields = Vector();
-        $$->ctors = init_Vector($1);
+        $$.fields = Vector();
+        $$.ctors = init_Vector($1);
     }
   | Operator ';' {
-        $$ = safe_malloc(sizeof(*$$));
-        $$->fields = init_Vector($1);
-        $$->ctors = Vector();
+        $$.fields = init_Vector($1);
+        $$.ctors = Vector();
     }
   | Fields Field ';' {
         $$ = $1;
-        $$->fields = Vector_append($$->fields, $2);
+        Vector_append($$.fields, $2);
     }
   | Fields Constructor ';' {
         $$ = $1;
-        $$->ctors = Vector_append($$->ctors, $2);
+        Vector_append($$.ctors, $2);
     }
   | Fields Operator ';' {
         $$ = $1;
-        $$->fields = Vector_append($$->fields, $2);
+        Vector_append($$.fields, $2);
     }
 
 Field
@@ -653,6 +648,7 @@ TypeDef
         $$ = NoneType(@$);
     }
   | FuncDef
+  | ClassDef
   | '(' Type ')' {
         $$ = $2;
     }

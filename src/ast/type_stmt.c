@@ -46,20 +46,9 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     for (size_t i = 0; i < nvars; i++) {
         char *name = Vector_get(ast->vars, i);
         size_t len = strlen(name);
-        Type *type_copy = copy_type(ast->type);
-        if (AddSymbol(name, len, type_copy, state)) {
-            char *oldTypeName = ast->type->toString(ast->type);
-            char *newTypeName = type_copy->toString(type_copy);
-            print_code_error(stderr,
-                ast->super.loc,
-                "redefinition of variable \"%.*s\" from type "
-                "\"%s\" to type \"%s\"",
-                (int)len,
-                name,
-                oldTypeName,
-                newTypeName);
-            free(oldTypeName);
-            free(newTypeName);
+        if (AddSymbol(name, len, ast->type, state, &msg)) {
+            print_code_error(stderr, ast->super.loc, msg);
+            free(msg);
             status = 1;
         }
     }

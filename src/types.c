@@ -56,17 +56,20 @@ delete_type(Type *type) {
 }
 
 void
-AddComparison(const Type *type, TypeCheckState *state) {
+AddComparison(const struct ClassType *type, TypeCheckState *state) {
+    if (Map_contains(state->compare, &type, sizeof(type))) {
+        return;
+    }
     Map *newCompare = Map();
     Iterator *it = Map_iterator(state->compare);
     while (it->hasNext(it)) {
         MapIterData next = it->next(it);
         Map *m = next.value;
-        Type **typePtr = next.key;
-        if (!(*typePtr)->compare(*typePtr, type, state)) {
+        struct ClassType **typePtr = next.key;
+        if (!compare_ClassType(*typePtr, type, state)) {
             Map_put(m, &type, sizeof(type), NULL, NULL);
         }
-        if (!type->compare(type, *typePtr, state)) {
+        if (!compare_ClassType(type, *typePtr, state)) {
             Map_put(newCompare, next.key, next.len, NULL, NULL);
         }
     }
@@ -77,28 +80,43 @@ AddComparison(const Type *type, TypeCheckState *state) {
 int
 AddSymbol(const char *symbol,
     size_t len,
-    Type *type_copy,
-    const TypeCheckState *state) {
+    Type *type,
+    const TypeCheckState *state,
+    char **msg) {
     Type *prev_type = NULL;
     if (Map_get(state->symbols, symbol, len, &prev_type)) {
+        Type *type_copy = type->copy(type);
         Map_put(state->symbols, symbol, len, type_copy, NULL);
         return 0;
     }
-    if (TYPE_FUNC == prev_type->type && TYPE_FUNC == type_copy->type) {
+    if (TYPE_FUNC == prev_type->type && TYPE_FUNC == type->type) {
         struct FuncType *func1 = (struct FuncType *)prev_type,
-            *func2 = (struct FuncType *)type_copy;
+            *func2 = (struct FuncType *)type->copy(type);
         while (NULL != func1->next) {
             func1 = func1->next;
         }
         func1->next = func2;
         return 0;
     }
-    if (type_copy->compare(type_copy, prev_type, state)) {
+    if (type->compare(type, prev_type, state)) {
+        char *oldName = prev_type->toString(prev_type),
+            *newName = type->toString(type);
+        *msg = safe_asprintf(
+            "redefinition of variable \"%.*s\" from type \"%s\" to type "
+            "\"%s\"",
+            (int)len,
+            symbol,
+            oldName,
+            newName);
+        free(oldName);
+        free(newName);
         return 1;
     }
-    prev_type->init = type_copy->init;
-    if (NULL != state->newInitSymbols) {
-        Map_put(state->newInitSymbols, symbol, len, NULL, NULL);
+    if (1 == type->init) {
+        prev_type->init = 1;
+        if (NULL != state->newInitSymbols) {
+            Map_put(state->newInitSymbols, symbol, len, NULL, NULL);
+        }
     }
     return 0;
 }

@@ -73,6 +73,11 @@ delete_field(struct Field *field) {
 }
 
 void
+delete_ctor(Vector *ctor) {
+    delete_Vector(ctor, (VEC_DELETE_FUNC)delete_type);
+}
+
+void
 delete_case(struct Case *c) {
     switch (c->caseType) {
         case CASE_EXPR:

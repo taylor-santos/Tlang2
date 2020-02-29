@@ -51,12 +51,20 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
     };
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
         struct Builtin builtin = builtins[i];
-        Type *type = ClassType(loc, Vector(), Vector(), Vector(), Map());
+        Vector *gen = Vector();
+        Vector *supers = Vector();
+        Vector *fields = Vector();
+        Vector *ctors = Vector();
+        Type *type = ClassType(loc, gen, supers, fields, ctors);
         Map_put(state.symbols, builtin.name, strlen(builtin.name), type, NULL);
         struct ClassType *class = (struct ClassType *)type;
         state.builtins[i] = class;
-        Vector_append(state.classes, class);
         Map_put(compare, &class, sizeof(class), Map(), NULL);
+        char *msg;
+        if (type->verify(type, &state, &msg)) {
+            print_ICE(msg);
+            exit(EXIT_FAILURE);
+        }
     }
     // Iterate through builtins again to add their fields. Some fields rely
     // on pre-existing builtins for argument and return types, so the
@@ -69,7 +77,7 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
             retType->verify(retType, &state, NULL);
             Type *fieldType = FuncType(loc, Vector(), Vector(), retType);
             char *fieldName = "=>";
-            Map_put(class->fields,
+            Map_put(class->fieldTypes,
                 fieldName,
                 strlen(fieldName),
                 fieldType,
@@ -86,7 +94,7 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
             Type *fieldType = FuncType(loc, Vector(), args, retType);
             Vector_append(state.functions, fieldType);
             char *fieldName = "==";
-            Map_put(class->fields,
+            Map_put(class->fieldTypes,
                 fieldName,
                 strlen(fieldName),
                 fieldType,

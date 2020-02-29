@@ -51,7 +51,10 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         const struct ClassType *class = object->class;
         const char *fieldName = "=>";
         Type *fieldType;
-        if (Map_get(class->fields, fieldName, strlen(fieldName), &fieldType)) {
+        if (Map_get(class->fieldTypes,
+            fieldName,
+            strlen(fieldName),
+            &fieldType)) {
             char *typeName = condType->toString(condType);
             print_code_error(stderr,
                 ast->cond->loc,

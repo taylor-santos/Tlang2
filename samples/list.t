@@ -183,6 +183,7 @@ foo := func(x: bool) => int {
     }
 };
 */
+/*
 f := func(d: double) => none {};
 x := 5;
 g := func(a: int, b: int) => int { return a; };
@@ -197,3 +198,38 @@ if true {
         };
     })(5);
 }
+*/
+
+/*
+A: class {
+    x: int;
+};
+
+B: class {
+    x: int;
+    y: string;
+};
+
+C: class {
+    y: string;
+};
+
+D: class {
+    x: int;
+    y: string;
+};
+*/
+
+A: class {
+    x: int;
+};
+
+B: class {
+    x: int;
+};
+
+foo := func(a: A) => none {};
+foo := func(b: B) => none {};
+
+a := new A();
+foo(a);

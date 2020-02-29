@@ -33,8 +33,8 @@ struct Field {
 };
 
 struct ClassBody {
-    struct Vector *fields;       // Vector<Field*>
-    struct Vector *ctors; // Vector<AST*>
+    struct Vector *fields; // Vector<Field*>
+    struct Vector *ctors;  // Vector<AST*>
 };
 
 struct Case {
@@ -74,10 +74,10 @@ void
 delete_field(struct Field *field);
 
 void
-delete_case(struct Case *c);
+delete_ctor(struct Vector *ctor);
 
 void
-delete_ctor(struct Vector *ctor);
+delete_case(struct Case *c);
 
 void
 delete_AST(AST *this);
@@ -118,14 +118,6 @@ new_ASTIndex(YYLTYPE loc, AST *expr, AST *index);
     new_ASTConstIndex(loc, expr, index)
 AST *
 new_ASTConstIndex(YYLTYPE loc, AST *expr, long long int index);
-
-#define ASTClass(loc, gen, inherit, fields) \
-    new_ASTClass(loc, gen, inherit, fields)
-AST *
-new_ASTClass(YYLTYPE loc,
-    struct Vector *generics,
-    struct Vector *inherits,
-    struct ClassBody *fields);
 
 #define ASTImpl(loc, name, gen, stmts) new_ASTImpl(loc, name, gen, stmts)
 AST *

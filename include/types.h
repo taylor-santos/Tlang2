@@ -54,10 +54,12 @@ struct FuncType {
 
 struct ClassType {
     Type super;
-    struct Vector *generics;     // Vector<char*>
-    struct Vector *supers;       // Vector<char*>
-    struct Vector *ctors; // Vector<Vector<Type*>>
-    struct Map *fields;          // Map<char*, Type*>
+    struct Vector *generics; // Vector<char*>
+    struct Vector *supers;   // Vector<char*>
+    struct Vector *fields;   // Vector<Field*>
+    struct Vector *ctors;    // Vector<Vector<Type*>>
+    // NULL until verify() is executed:
+    struct Map *fieldTypes;  // Map<char*, Type*>
 };
 
 struct ObjectType {
@@ -127,6 +129,11 @@ delete_type(Type *type);
 void
 delete_ClassType(struct ClassType *this);
 
+int
+compare_ClassType(const struct ClassType *this,
+    const struct ClassType *other,
+    const struct TypeCheckState *state);
+
 Type *
 copy_type(Type *type);
 
@@ -134,7 +141,7 @@ int
 TypeCompare(const Type *type1, const Type *type2, const TypeCheckState *state);
 
 void
-AddComparison(const Type *type, TypeCheckState *state);
+AddComparison(const struct ClassType *type, TypeCheckState *state);
 
 /*
  * Add a symbol and its type to the state's symbol table. If there is a name
@@ -149,7 +156,8 @@ int
 AddSymbol(const char *symbol,
     size_t len,
     Type *type,
-    const TypeCheckState *state);
+    const TypeCheckState *state,
+    char **msg);
 
 #define FuncType(loc, gen, args, ret) \
     new_FuncType(loc, gen, args, ret)
@@ -159,14 +167,14 @@ new_FuncType(YYLTYPE loc,
     struct Vector *args,
     Type *ret_type);
 
-#define ClassType(loc, gen, sup, ctors, fields) \
-    new_ClassType(loc, gen, sup, ctors, fields)
+#define ClassType(loc, gen, sup, fields, ctors) \
+    new_ClassType(loc, gen, sup, fields, ctors)
 Type *
 new_ClassType(YYLTYPE loc,
     struct Vector *generics,
     struct Vector *supers,
-    struct Vector *ctors,
-    struct Map *fields);
+    struct Vector *fields,
+    struct Vector *ctors);
 
 #define ObjectType(loc, name, gen) \
     new_ObjectType(loc, name, gen)
