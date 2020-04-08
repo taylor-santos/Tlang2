@@ -58,8 +58,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             char *typeName = condType->toString(condType);
             print_code_error(stderr,
                 ast->cond->loc,
-                "conditional expression with type \"%s\" does not implement"
-                " an explicit cast to bool",
+                "expression with type \"%s\" does not implement"
+                " a cast to type \"bool\"",
                 typeName);
             free(typeName);
             status = 1;

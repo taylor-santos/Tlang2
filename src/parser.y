@@ -106,7 +106,6 @@
                    T_CASE       "case"
                    T_DEFAULT    "default"
                    T_OPERATOR   "operator"
-                   T_DEF        ":="
                    T_ARROW      "=>"
                    T_MUL_ASSIGN "*="
                    T_DIV_ASSIGN "/="
@@ -186,7 +185,7 @@ Statement
   | Return ';'
 
 Definition
-  : DefVars T_DEF Expression ';' {
+  : DefVars '=' Expression ';' {
         $$ = ASTDefinition(@$, $1, $3);
     }
 
@@ -460,12 +459,36 @@ Tuple
 
 Expression
   : OpExpr
-  | UnaryExpr '=' Expression
-  | UnaryExpr T_MUL_ASSIGN Expression
-  | UnaryExpr T_DIV_ASSIGN Expression
-  | UnaryExpr T_MOD_ASSIGN Expression
-  | UnaryExpr T_ADD_ASSIGN Expression
-  | UnaryExpr T_SUB_ASSIGN Expression
+  | PostfixExpr T_MUL_ASSIGN Expression {
+        Vector *args = init_Vector($3);
+        char *name = safe_strdup("*=");
+        AST *method = ASTMember(@$, $1, name);
+        $$ = ASTCall(@$, method, args);
+    }
+  | PostfixExpr T_DIV_ASSIGN Expression {
+        Vector *args = init_Vector($3);
+        char *name = safe_strdup("/=");
+        AST *method = ASTMember(@$, $1, name);
+        $$ = ASTCall(@$, method, args);
+    }
+  | PostfixExpr T_MOD_ASSIGN Expression {
+        Vector *args = init_Vector($3);
+        char *name = safe_strdup("%=");
+        AST *method = ASTMember(@$, $1, name);
+        $$ = ASTCall(@$, method, args);
+    }
+  | PostfixExpr T_ADD_ASSIGN Expression {
+        Vector *args = init_Vector($3);
+        char *name = safe_strdup("+=");
+        AST *method = ASTMember(@$, $1, name);
+        $$ = ASTCall(@$, method, args);
+    }
+  | PostfixExpr T_SUB_ASSIGN Expression {
+        Vector *args = init_Vector($3);
+        char *name = safe_strdup("-=");
+        AST *method = ASTMember(@$, $1, name);
+        $$ = ASTCall(@$, method, args);
+    }
 
 ClassDef
   : T_CLASS OptInherits '{' OptFields '}' {

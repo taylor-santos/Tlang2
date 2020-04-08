@@ -100,7 +100,7 @@ main(int argc, char *argv[]) {
             json_AST(root, stdout, 0);
             fprintf(stdout, "\n");
             if (TypeCheck(root)) {
-                print_error("type checker failed");
+                print_error("type checker failed\n");
             }
             delete_AST(root);
         }

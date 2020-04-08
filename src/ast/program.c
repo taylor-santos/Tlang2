@@ -29,14 +29,30 @@ json(const void *this, FILE *out, int indent) {
     json_end(out, &indent);
 }
 
+enum OPTYPE {
+    PLUS = 1 << 0, MINUS = 1 << 1, TIMES = 1 << 2, DIVIDE = 1 << 3
+};
+
+struct Operator {
+    enum OPTYPE type;
+    const char *op;
+    const char *assign_op;
+} operators[] = {
+    { PLUS,   "+", "+=" },
+    { MINUS,  "-", "-=" },
+    { TIMES,  "*", "*=" },
+    { DIVIDE, "/", "/=" }
+};
+
 struct Builtin {
     char *name;
     unsigned int toBool: 1;
+    enum OPTYPE operators;
 } builtins[] = {
-    { "int",    1 },
-    { "bool",   1 },
-    { "double", 1 },
-    { "string", 0 },
+    { "int",    1, PLUS | MINUS | TIMES | DIVIDE },
+    { "bool",   1, 0 },
+    { "double", 1, PLUS | MINUS | TIMES | DIVIDE },
+    { "string", 0, PLUS },
 };
 
 static TypeCheckState
@@ -82,6 +98,42 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
                 strlen(fieldName),
                 fieldType,
                 NULL);
+        }
+        for (size_t j = 0; j < sizeof(operators) / sizeof(*operators); j++) {
+            if (builtin.operators & operators[j].type) {
+                {
+                    Type *retType =
+                        ObjectType(loc, safe_strdup(builtin.name), Vector());
+                    Type *argType =
+                        ObjectType(loc, safe_strdup(builtin.name), Vector());
+                    retType->verify(retType, &state, NULL);
+                    argType->verify(argType, &state, NULL);
+                    Vector *args = init_Vector(argType);
+                    Type *fieldType = FuncType(loc, Vector(), args, retType);
+                    Vector_append(state.functions, fieldType);
+                    Map_put(class->fieldTypes,
+                        operators[j].op,
+                        strlen(operators[j].op),
+                        fieldType,
+                        NULL);
+                }
+                {
+                    Type *retType =
+                        ObjectType(loc, safe_strdup(builtin.name), Vector());
+                    Type *argType =
+                        ObjectType(loc, safe_strdup(builtin.name), Vector());
+                    retType->verify(retType, &state, NULL);
+                    argType->verify(argType, &state, NULL);
+                    Vector *args = init_Vector(argType);
+                    Type *fieldType = FuncType(loc, Vector(), args, retType);
+                    Vector_append(state.functions, fieldType);
+                    Map_put(class->fieldTypes,
+                        operators[j].assign_op,
+                        strlen(operators[j].assign_op),
+                        fieldType,
+                        NULL);
+                }
+            }
         }
         {
             Type *retType =
