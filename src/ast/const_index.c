@@ -65,6 +65,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return 1;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTConstIndex *ast = this;
@@ -81,7 +86,7 @@ new_ASTConstIndex(YYLTYPE loc, AST *expr, long long int index) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTConstIndex){
-        { json, getType, delete, loc }, expr, index, NULL
+        { json, getType, codeGen, delete, loc }, expr, index, NULL
     };
     return (AST *)node;
 }

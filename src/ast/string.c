@@ -38,6 +38,11 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
     return 0;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTString *ast = this;
@@ -55,7 +60,7 @@ new_ASTString(YYLTYPE loc, dstring str) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
-        { json, getType, delete, loc }, str, type
+        { json, getType, codeGen, delete, loc }, str, type
     };
     return (AST *)node;
 }

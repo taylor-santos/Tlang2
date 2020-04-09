@@ -41,6 +41,11 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     return 1;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTImpl *ast = this;
@@ -56,7 +61,7 @@ new_ASTImpl(YYLTYPE loc, char *name, Vector *generics, Vector *stmts) {
 
     impl = safe_malloc(sizeof(*impl));
     *impl = (ASTImpl){
-        { json, getType, delete, loc }, name, generics, stmts
+        { json, getType, codeGen, delete, loc }, name, generics, stmts
     };
     return (AST *)impl;
 }

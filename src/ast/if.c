@@ -172,6 +172,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTIf *ast = this;
@@ -196,7 +201,7 @@ new_ASTIf(YYLTYPE loc, AST *cond, Vector *trueStmts, Vector *falseStmts) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTIf){
-        { json, getType, delete, loc },
+        { json, getType, codeGen, delete, loc },
         cond,
         trueStmts,
         falseStmts,

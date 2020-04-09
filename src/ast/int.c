@@ -37,6 +37,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return 0;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTInt *ast = this;
@@ -53,7 +58,7 @@ new_ASTInt(YYLTYPE loc, long long int val) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
-        { json, getType, delete, loc }, val, type
+        { json, getType, codeGen, delete, loc }, val, type
     };
     return (AST *)node;
 }

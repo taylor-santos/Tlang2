@@ -45,6 +45,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return 0;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTVariable *ast = this;
@@ -58,7 +63,7 @@ new_ASTVariable(YYLTYPE loc, char *name) {
 
     variable = safe_malloc(sizeof(*variable));
     *variable = (ASTVariable){
-        { json, getType, delete, loc }, name
+        { json, getType, codeGen, delete, loc }, name
     };
     return (AST *)variable;
 }

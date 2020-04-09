@@ -55,6 +55,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTTypeStmt *ast = this;
@@ -69,7 +74,7 @@ new_ASTTypeStmt(YYLTYPE loc, Vector *vars, Type *type) {
 
     named_type = safe_malloc(sizeof(*named_type));
     *named_type = (ASTTypeStmt){
-        { json, getType, delete, loc }, vars, type
+        { json, getType, codeGen, delete, loc }, vars, type
     };
     return (AST *)named_type;
 }

@@ -87,6 +87,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return 1;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTCast *ast = this;
@@ -101,7 +106,7 @@ new_ASTCast(struct YYLTYPE loc, AST *expr, Type *type) {
 
     cast = safe_malloc(sizeof(*cast));
     *cast = (ASTCast){
-        { json, getType, delete, loc }, expr, type
+        { json, getType, codeGen, delete, loc }, expr, type
     };
     return (AST *)cast;
 }

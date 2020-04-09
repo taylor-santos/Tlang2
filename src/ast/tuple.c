@@ -66,6 +66,11 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTTuple *ast = this;
@@ -82,7 +87,7 @@ new_ASTTuple(YYLTYPE loc, SparseVector *exprs) {
 
     tuple = safe_malloc(sizeof(*tuple));
     *tuple = (ASTTuple){
-        { json, getType, delete, loc }, exprs, NULL
+        { json, getType, codeGen, delete, loc }, exprs, NULL
     };
     return (AST *)tuple;
 }

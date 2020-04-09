@@ -46,6 +46,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     return 0;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTSpread *ast = this;
@@ -62,7 +67,7 @@ new_ASTSpread(YYLTYPE loc, AST *expr) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTSpread){
-        { json, getType, delete, loc }, expr, NULL
+        { json, getType, codeGen, delete, loc }, expr, NULL
     };
     return (AST *)node;
 }

@@ -114,6 +114,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTWhile *ast = this;
@@ -134,7 +139,7 @@ new_ASTWhile(YYLTYPE loc, AST *cond, struct Vector *stmts) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTWhile){
-        { json, getType, delete, loc }, cond, stmts, NULL, NULL
+        { json, getType, codeGen, delete, loc }, cond, stmts, NULL, NULL
     };
     return (AST *)node;
 }

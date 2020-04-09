@@ -134,6 +134,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return 1;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTInit *ast = this;
@@ -155,7 +160,12 @@ new_ASTInit(YYLTYPE loc, char *name, Vector *generics, Vector *args) {
 
     init = safe_malloc(sizeof(*init));
     *init = (ASTInit){
-        { json, getType, delete, loc }, name, generics, args, NULL, NULL
+        { json, getType, codeGen, delete, loc },
+        name,
+        generics,
+        args,
+        NULL,
+        NULL
     };
     return (AST *)init;
 }

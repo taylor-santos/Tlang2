@@ -62,6 +62,11 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     return 0;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTMember *ast = this;
@@ -79,7 +84,7 @@ new_ASTMember(YYLTYPE loc, AST *expr, char *name) {
 
     member = safe_malloc(sizeof(*member));
     *member = (ASTMember){
-        { json, getType, delete, loc }, expr, name, NULL
+        { json, getType, codeGen, delete, loc }, expr, name, NULL
     };
     return (AST *)member;
 }

@@ -124,6 +124,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTDefinition *ast = this;
@@ -138,7 +143,7 @@ new_ASTDefinition(YYLTYPE loc, Vector *vars, AST *expr) {
 
     definition = safe_malloc(sizeof(*definition));
     *definition = (ASTDefinition){
-        { json, getType, delete, loc }, vars, expr
+        { json, getType, codeGen, delete, loc }, vars, expr
     };
     return (AST *)definition;
 }

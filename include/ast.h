@@ -23,6 +23,7 @@ typedef struct AST {
     int (*getType)(void *this,
         struct TypeCheckState *state,
         struct Type **typeptr);
+    char *(*codeGen)(void *this, struct TypeCheckState *state);
     void (*delete)(void *this);
     struct YYLTYPE loc;
 } AST;

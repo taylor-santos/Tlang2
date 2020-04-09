@@ -252,6 +252,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete_symbols(Map *symbols) {
     delete_Map(symbols, (MAP_DELETE_FUNC)delete_type);
@@ -283,7 +288,7 @@ new_ASTSwitch(YYLTYPE loc,
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTSwitch){
-        { json, getType, delete, loc }, expr, cases, def, NULL, NULL
+        { json, getType, codeGen, delete, loc }, expr, cases, def, NULL, NULL
     };
     return (AST *)node;
 }

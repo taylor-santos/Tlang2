@@ -212,6 +212,11 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete_compare(Map *compare) {
     delete_Map(compare, NULL);
@@ -240,7 +245,7 @@ new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     functions = Vector();
     compare = Map();
     *program = (ASTProgram){
-        { json, getType, delete, loc },
+        { json, getType, codeGen, delete, loc },
         stmts,
         symbols,
         classes,

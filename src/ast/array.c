@@ -43,6 +43,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     return 0;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTArray *ast = this;
@@ -59,7 +64,7 @@ new_ASTArray(struct YYLTYPE loc, Type *array_type, long long int index) {
 
     array = safe_malloc(sizeof(*array));
     *array = (ASTArray){
-        { json, getType, delete, loc }, array_type, index, NULL
+        { json, getType, codeGen, delete, loc }, array_type, index, NULL
     };
     return (AST *)array;
 }

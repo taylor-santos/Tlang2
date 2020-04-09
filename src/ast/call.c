@@ -114,6 +114,11 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     return status;
 }
 
+static char *
+codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
+    return safe_strdup("/* NOT IMPLEMENTED */");
+}
+
 static void
 delete(void *this) {
     ASTCall *ast = this;
@@ -132,7 +137,7 @@ new_ASTCall(YYLTYPE loc, AST *expr, Vector *args) {
 
     call = safe_malloc(sizeof(*call));
     *call = (ASTCall){
-        { json, getType, delete, loc }, expr, args, NULL, NULL
+        { json, getType, codeGen, delete, loc }, expr, args, NULL, NULL
     };
     return (AST *)call;
 }
