@@ -10,7 +10,6 @@ typedef struct ASTSpread ASTSpread;
 struct ASTSpread {
     AST super;
     AST *expr;
-    Type *type; // NULL until type checker is executed.
 };
 
 static void
@@ -42,21 +41,21 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeStr);
         return 1;
     }
-    *typeptr = ast->type = SpreadType((struct TupleType *)expr_type);
+    *typeptr = ast->super.type = SpreadType((struct TupleType *)expr_type);
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* SPREAD NOT IMPLEMENTED */");
 }
 
 static void
 delete(void *this) {
     ASTSpread *ast = this;
     delete_AST(ast->expr);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
     }
     free(this);
 }
@@ -67,7 +66,7 @@ new_ASTSpread(YYLTYPE loc, AST *expr) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTSpread){
-        { json, getType, codeGen, delete, loc }, expr, NULL
+        { json, getType, codeGen, delete, loc, NULL }, expr
     };
     return (AST *)node;
 }

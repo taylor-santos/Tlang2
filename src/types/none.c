@@ -43,6 +43,11 @@ toString(UNUSED const void *type) {
     return safe_strdup("none");
 }
 
+static char *
+codeGen(UNUSED const void *this, UNUSED const char *name) {
+    return NULL;
+}
+
 static void
 delete(void *type) {
     struct NoneType *this = type;
@@ -63,7 +68,7 @@ copy(const void *type) {
     }
     *type_copy = (struct NoneType){
         {
-            json, copy, compare, verify, toString, delete, TYPE_NONE, qualifiers, this->super.init, 1, this->super.loc
+            json, copy, compare, verify, toString, codeGen, delete, TYPE_NONE, qualifiers, this->super.init, 1, this->super.loc
         }
     };
     return (Type *)type_copy;
@@ -76,7 +81,7 @@ new_NoneType(YYLTYPE loc) {
     type = safe_malloc(sizeof(*type));
     *type = (struct NoneType){
         {
-            json, copy, compare, verify, toString, delete, TYPE_NONE, NULL, 0, 0, loc
+            json, copy, compare, verify, toString, codeGen, delete, TYPE_NONE, NULL, 0, 0, loc
         }
     };
     return (Type *)type;

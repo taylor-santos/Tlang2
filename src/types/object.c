@@ -80,6 +80,20 @@ toString(const void *type) {
     return name;
 }
 
+static char *
+codeGen(const void *this, const char *name) {
+    const struct ObjectType *type = this;
+    const char *ident = NULL == name
+        ? ""
+        : name;
+    return safe_asprintf("class_%s%s%s",
+        type->name,
+        NULL == name
+            ? ""
+            : " ",
+        ident);
+}
+
 static void
 delete(void *type) {
     struct ObjectType *this = type;
@@ -109,6 +123,7 @@ copy(const void *type) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_OBJECT,
             qualifiers,
@@ -132,6 +147,7 @@ new_ObjectType(YYLTYPE loc, char *name, struct Vector *generics) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_OBJECT,
             NULL,

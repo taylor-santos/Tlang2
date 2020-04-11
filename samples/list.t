@@ -219,7 +219,7 @@ D: class {
     y: string;
 };
 */
-
+/*
 A: class {
     x: int;
 };
@@ -233,3 +233,20 @@ foo := func(b: B) => none {};
 
 a := new A();
 foo(a);
+*/
+/*
+B: class {
+    x: int;
+};
+C: class {
+    y: bool;
+};
+A: class {
+    x: int;
+    y: bool;
+};
+a = new A();
+b = 5;
+b += 10;
+*/
+(5 => double) += 1.0;

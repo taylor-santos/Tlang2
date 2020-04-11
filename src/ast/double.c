@@ -9,7 +9,6 @@ typedef struct ASTDouble ASTDouble;
 struct ASTDouble {
     AST super;
     double val;
-    Type *type;
 };
 
 static void
@@ -28,24 +27,25 @@ static int
 getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     ASTDouble *ast = this;
     char *msg;
-    if (ast->type->verify(ast->type, state, &msg)) {
+    if (ast->super.type->verify(ast->super.type, state, &msg)) {
         print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
     }
-    *typeptr = ast->type;
+    *typeptr = ast->super.type;
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    ASTDouble *ast = this;
+    return safe_asprintf("new_double(%f)", ast->val);
 }
 
 static void
 delete(void *this) {
     ASTDouble *ast = this;
-    delete_type(ast->type);
+    delete_type(ast->super.type);
     free(this);
 }
 
@@ -58,7 +58,15 @@ new_ASTDouble(YYLTYPE loc, double val) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTDouble){
-        { json, getType, codeGen, delete, loc }, val, type
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            type
+        },
+        val
     };
     return (AST *)node;
 }

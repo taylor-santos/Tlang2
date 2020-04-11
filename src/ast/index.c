@@ -39,8 +39,8 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* INDEX NOT IMPLEMENTED */");
 }
 
 static void
@@ -57,7 +57,7 @@ new_ASTIndex(YYLTYPE loc, AST *expr, AST *index) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTIndex){
-        { json, getType, codeGen, delete, loc }, expr, index
+        { json, getType, codeGen, delete, loc, NULL }, expr, index
     };
     return (AST *)node;
 }

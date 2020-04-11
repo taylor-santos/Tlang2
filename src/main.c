@@ -101,6 +101,8 @@ main(int argc, char *argv[]) {
             fprintf(stdout, "\n");
             if (TypeCheck(root)) {
                 print_error("type checker failed\n");
+            } else {
+                CodeGen(root, output);
             }
             delete_AST(root);
         }

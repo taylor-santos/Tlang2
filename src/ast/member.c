@@ -11,7 +11,6 @@ struct ASTMember {
     AST super;
     AST *expr;
     char *name;
-    Type *type; // NULL until type checker is executed.
 };
 
 static void
@@ -58,13 +57,43 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
         free(typeName);
         return 1;
     }
-    *typeptr = ast->type = copy_type(fieldType);
+    *typeptr = ast->super.type = copy_type(fieldType);
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, CodeGenState *state) {
+    const ASTMember *ast = this;
+    char *code = ast->expr->codeGen(ast->expr, out, state);
+    char *tmpName = safe_asprintf("temp%d", state->tempCount);
+    state->tempCount++;
+    char *typeName = ast->expr->type->codeGen(ast->expr->type, tmpName);
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "%s = %s;\n", typeName, code);
+    free(typeName);
+    free(code);
+
+    if (ast->super.type->type == TYPE_FUNC) {
+        char *tmpName2 = safe_asprintf("temp%d", state->tempCount);
+        state->tempCount++;
+        char fieldName[strlen(ast->name) * 2 + 1];
+        strident(ast->name, fieldName);
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out,
+            "closure %s = { %s->field_%s, (void*[]){%s} };\n",
+            tmpName2,
+            tmpName,
+            fieldName,
+            tmpName);
+        free(tmpName);
+        return tmpName2;
+    } else {
+        char fieldName[strlen(ast->name) * 2 + 1];
+        strident(ast->name, fieldName);
+        char *ret = safe_asprintf("%s->field_%s", tmpName, fieldName);
+        free(tmpName);
+        return ret;
+    }
 }
 
 static void
@@ -72,8 +101,8 @@ delete(void *this) {
     ASTMember *ast = this;
     delete_AST(ast->expr);
     free(ast->name);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
     }
     free(this);
 }
@@ -84,7 +113,16 @@ new_ASTMember(YYLTYPE loc, AST *expr, char *name) {
 
     member = safe_malloc(sizeof(*member));
     *member = (ASTMember){
-        { json, getType, codeGen, delete, loc }, expr, name, NULL
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        expr,
+        name
     };
     return (AST *)member;
 }

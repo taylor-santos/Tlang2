@@ -15,7 +15,6 @@ struct ASTFunc {
     Vector *args;     // Vector<Field*>
     Type *ret_type;
     Vector *stmts;    // Vector<AST*>
-    Type *type;       // NULL until type checker is executed.
     Map *symbols;     // NULL until type checker is executed.
 };
 
@@ -121,14 +120,15 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 1;
     }
     Type *ret_type = copy_type(ast->ret_type);
-    *typeptr = ast->type = FuncType(ast->super.loc, Vector(), args, ret_type);
-    Vector_append(state->functions, ast->type);
+    *typeptr = ast->super.type =
+        FuncType(ast->super.loc, Vector(), args, ret_type);
+    Vector_append(state->functions, ast->super.type);
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* FUNC NOT IMPLEMENTED */");
 }
 
 static void
@@ -138,8 +138,8 @@ delete(void *this) {
     delete_Vector(ast->args, (VEC_DELETE_FUNC)delete_field);
     delete_type(ast->ret_type);
     delete_Vector(ast->stmts, (VEC_DELETE_FUNC)delete_AST);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
     }
     if (NULL != ast->symbols) {
         delete_Map(ast->symbols, (MAP_DELETE_FUNC)delete_type);
@@ -158,8 +158,8 @@ new_ASTFunc(YYLTYPE loc,
     func = safe_malloc(sizeof(*func));
     *func = (ASTFunc){
         {
-            json, getType, codeGen, delete, loc
-        }, generics, args, ret_type, stmts, NULL, NULL
+            json, getType, codeGen, delete, loc, NULL
+        }, generics, args, ret_type, stmts, NULL
     };
     return (AST *)func;
 }

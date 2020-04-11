@@ -63,12 +63,17 @@ toString(const void *type) {
         unsigned long long c;
         SparseVector_get(this->types, i, &t, &c);
         char *s = t->toString(t);
-        append_vstr(&str, "%s%s", sep, s);
+        vappend_str(&str, "%s%s", sep, s);
         free(s);
         sep = ",";
     }
     append_str(&str, ")");
     return str.str;
+}
+
+static char *
+codeGen(UNUSED const void *this, UNUSED const char *name) {
+    return NULL;
 }
 
 static void
@@ -96,6 +101,7 @@ copy(const void *type) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_SPREAD,
             qualifiers,
@@ -119,6 +125,7 @@ new_SpreadType(struct TupleType *tuple) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_SPREAD,
             NULL,

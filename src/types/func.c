@@ -134,12 +134,12 @@ overload_toString(const struct FuncType *func, dstring *str) {
     for (size_t i = 0; i < n; i++) {
         Type *t = Vector_get(func->args, i);
         char *s = t->toString(t);
-        append_vstr(str, "%s%s", sep, s);
+        vappend_str(str, "%s%s", sep, s);
         free(s);
         sep = ", ";
     }
     char *s = func->ret_type->toString(func->ret_type);
-    append_vstr(str, ") => %s", s);
+    vappend_str(str, ") => %s", s);
     free(s);
 }
 
@@ -154,6 +154,29 @@ toString(const void *type) {
     }
     append_str(&str, "}");
     return str.str;
+}
+
+static char *
+codeGen(const void *this, const char *name) {
+    const struct FuncType *type = this;
+    char *retType = type->ret_type->codeGen(type->ret_type, NULL);
+    const char *ident = name == NULL
+        ? ""
+        : name;
+    dstring ret = dstring(retType);
+    free(retType);
+    vappend_str(&ret, " (*%s)(", ident);
+    size_t n = Vector_size(type->args);
+    char *sep = "";
+    for (size_t i = 0; i < n; i++) {
+        Type *arg = Vector_get(type->args, i);
+        char *argName = arg->codeGen(arg, NULL);
+        vappend_str(&ret, "%s%s", sep, argName);
+        free(argName);
+        sep = ", ";
+    }
+    append_str(&ret, ")");
+    return ret.str;
 }
 
 static void
@@ -193,6 +216,7 @@ copy(const void *type) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_FUNC,
             qualifiers,
@@ -216,6 +240,7 @@ new_FuncType(YYLTYPE loc, Vector *generics, Vector *args, Type *ret_type) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_FUNC,
             NULL,

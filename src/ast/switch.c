@@ -253,8 +253,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* SWITCH NOT IMPLEMENTED */");
 }
 
 static void
@@ -288,7 +288,12 @@ new_ASTSwitch(YYLTYPE loc,
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTSwitch){
-        { json, getType, codeGen, delete, loc }, expr, cases, def, NULL, NULL
+        { json, getType, codeGen, delete, loc, NULL },
+        expr,
+        cases,
+        def,
+        NULL,
+        NULL
     };
     return (AST *)node;
 }

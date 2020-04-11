@@ -16,7 +16,6 @@ struct ASTIf {
     Vector *trueStmts;  // Vector<AST*>
     Vector *falseStmts; // Vector<AST*>
     // NULL until type checker is executed:
-    Type *type;
     Map *trueSymbols;
     Map *falseSymbols;
 };
@@ -173,8 +172,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* IF NOT IMPLEMENTED */");
 }
 
 static void
@@ -183,9 +182,6 @@ delete(void *this) {
     delete_AST(ast->cond);
     delete_Vector(ast->trueStmts, (VEC_DELETE_FUNC)delete_AST);
     delete_Vector(ast->falseStmts, (VEC_DELETE_FUNC)delete_AST);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
-    }
     if (NULL != ast->trueSymbols) {
         delete_Map(ast->trueSymbols, (MAP_DELETE_FUNC)delete_type);
     }
@@ -201,11 +197,10 @@ new_ASTIf(YYLTYPE loc, AST *cond, Vector *trueStmts, Vector *falseStmts) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTIf){
-        { json, getType, codeGen, delete, loc },
+        { json, getType, codeGen, delete, loc, NULL },
         cond,
         trueStmts,
         falseStmts,
-        NULL,
         NULL,
         NULL
     };

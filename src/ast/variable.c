@@ -41,19 +41,23 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             ast->name);
         return 1;
     }
-    *typeptr = type;
+    *typeptr = ast->super.type = copy_type(type);
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    const ASTVariable *ast = this;
+    return safe_asprintf("var_%s", ast->name);
 }
 
 static void
 delete(void *this) {
     ASTVariable *ast = this;
     free(ast->name);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
+    }
     free(this);
 }
 
@@ -63,7 +67,7 @@ new_ASTVariable(YYLTYPE loc, char *name) {
 
     variable = safe_malloc(sizeof(*variable));
     *variable = (ASTVariable){
-        { json, getType, codeGen, delete, loc }, name
+        { json, getType, codeGen, delete, loc, NULL }, name
     };
     return (AST *)variable;
 }

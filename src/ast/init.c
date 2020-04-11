@@ -16,7 +16,6 @@ struct ASTInit {
     Vector *generics; // Vector<char*>
     Vector *args;     // Vector<AST*>
     Vector *argTypes; // NULL until type checker is executed.
-    Type *type;       // NULL until type checker is executed.
 };
 
 static void
@@ -85,15 +84,15 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     size_t nctors = Vector_size(class->ctors);
     if (nctors == 0 && ngiven == 0) {
         // Implicit default constructor
-        *typeptr = ast->type =
+        *typeptr = ast->super.type =
             ObjectType(ast->super.loc, safe_strdup(ast->name), Vector());
         char *msg;
-        if (ast->type->verify(ast->type, state, &msg)) {
-            print_code_error(stderr, ast->type->loc, msg);
+        if (ast->super.type->verify(ast->super.type, state, &msg)) {
+            print_code_error(stderr, ast->super.type->loc, msg);
             free(msg);
             return 1;
         }
-        ast->type->init = 1;
+        ast->super.type->init = 1;
         return 0;
     }
     for (size_t i = 0; i < nctors; i++) {
@@ -110,16 +109,16 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                 }
             }
             if (valid) {
-                *typeptr = ast->type = ObjectType(ast->super.loc,
+                *typeptr = ast->super.type = ObjectType(ast->super.loc,
                     safe_strdup(ast->name),
                     Vector());
                 char *msg;
-                if (ast->type->verify(ast->type, state, &msg)) {
-                    print_code_error(stderr, ast->type->loc, msg);
+                if (ast->super.type->verify(ast->super.type, state, &msg)) {
+                    print_code_error(stderr, ast->super.type->loc, msg);
                     free(msg);
                     return 1;
                 }
-                ast->type->init = 1;
+                ast->super.type->init = 1;
                 return 0;
             }
         }
@@ -135,8 +134,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* INIT NOT IMPLEMENTED */");
 }
 
 static void
@@ -148,8 +147,8 @@ delete(void *this) {
     if (NULL != ast->argTypes) {
         delete_Vector(ast->argTypes, (VEC_DELETE_FUNC)delete_type);
     }
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
     }
     free(this);
 }
@@ -160,11 +159,10 @@ new_ASTInit(YYLTYPE loc, char *name, Vector *generics, Vector *args) {
 
     init = safe_malloc(sizeof(*init));
     *init = (ASTInit){
-        { json, getType, codeGen, delete, loc },
+        { json, getType, codeGen, delete, loc, NULL },
         name,
         generics,
         args,
-        NULL,
         NULL
     };
     return (AST *)init;

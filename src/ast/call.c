@@ -13,7 +13,6 @@ struct ASTCall {
     Vector *args;     // Vector<AST*>
     // NULL until type checker is executed:
     Vector *argTypes; // Vector<Type*>, types don't need to be deleted
-    Type *type;
 };
 
 static void
@@ -91,7 +90,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             continue;
         }
         found = 1;
-        *typeptr = ast->type = func->ret_type->copy(func->ret_type);
+        *typeptr = ast->super.type = func->ret_type->copy(func->ret_type);
     }
     if (0 == found) {
         dstring str = dstring("no matching function call with argument type");
@@ -102,7 +101,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         for (size_t i = 0; i < ngiven; i++) {
             Type *givenType = Vector_get(ast->argTypes, i);
             char *typeName = givenType->toString(givenType);
-            append_vstr(&str, "%s%s", sep, typeName);
+            vappend_str(&str, "%s%s", sep, typeName);
             free(typeName);
             sep = ", ";
         }
@@ -115,8 +114,30 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, CodeGenState *state) {
+    const ASTCall *ast = this;
+    char *code = ast->expr->codeGen(ast->expr, out, state);
+    size_t n = Vector_size(ast->args);
+    char *args[n];
+    for (size_t i = 0; i < n; i++) {
+        AST *arg = Vector_get(ast->args, i);
+        args[i] = arg->codeGen(arg, out, state);
+    }
+    char *tmpName = safe_asprintf("temp%d", state->tempCount);
+    state->tempCount++;
+    char *typeName = ast->super.type->codeGen(ast->super.type, tmpName);
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "%s = CALL(%s, (void*[]){", typeName, code);
+    char *sep = "";
+    for (size_t i = 0; i < n; i++) {
+        fprintf(out, "%s%s", sep, args[i]);
+        sep = ", ";
+        free(args[i]);
+    }
+    fprintf(out, "});\n");
+    free(typeName);
+    free(code);
+    return tmpName;
 }
 
 static void
@@ -124,8 +145,8 @@ delete(void *this) {
     ASTCall *ast = this;
     delete_AST(ast->expr);
     delete_Vector(ast->args, (VEC_DELETE_FUNC)delete_AST);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
         delete_Vector(ast->argTypes, NULL);
     }
     free(this);
@@ -137,7 +158,17 @@ new_ASTCall(YYLTYPE loc, AST *expr, Vector *args) {
 
     call = safe_malloc(sizeof(*call));
     *call = (ASTCall){
-        { json, getType, codeGen, delete, loc }, expr, args, NULL, NULL
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        expr,
+        args,
+        NULL
     };
     return (AST *)call;
 }

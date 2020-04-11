@@ -33,5 +33,7 @@ int
 print_ICE(const char *fmt, ...);
 void
 print_code_error(FILE *out, struct YYLTYPE loc, const char *msg, ...);
+void
+strident(const char *str, char *buf);
 
 #endif

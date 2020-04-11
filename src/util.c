@@ -134,3 +134,17 @@ print_code_error(FILE *out, YYLTYPE loc, const char *msg, ...) {
     }
     free(line);
 }
+
+void
+strident(const char *str, char *buf) {
+    char *curr = buf;
+    while (*str != '\0') {
+        if ((*str >= 'a' && *str <= 'z') || (*str >= 'A' && *str <= 'Z') ||
+            (*str >= '0' && *str <= '9') || *str == '_') {
+            *curr = *str;
+        } else {
+            curr += sprintf(curr, "%X", *str);
+        }
+        str++;
+    }
+}

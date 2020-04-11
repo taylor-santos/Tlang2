@@ -11,7 +11,6 @@ struct ASTWhile {
     AST super;
     AST *cond;
     Vector *stmts;  // Vector<AST*>
-    Type *type;     // NULL until type checker is executed.
     Map *symbols;   // NULL until type checker is executed.
 };
 
@@ -115,8 +114,8 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* WHILE NOT IMPLEMENTED */");
 }
 
 static void
@@ -124,9 +123,6 @@ delete(void *this) {
     ASTWhile *ast = this;
     delete_AST(ast->cond);
     delete_Vector(ast->stmts, (VEC_DELETE_FUNC)delete_AST);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
-    }
     if (NULL != ast->symbols) {
         delete_Map(ast->symbols, (MAP_DELETE_FUNC)delete_type);
     }
@@ -139,7 +135,7 @@ new_ASTWhile(YYLTYPE loc, AST *cond, struct Vector *stmts) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTWhile){
-        { json, getType, codeGen, delete, loc }, cond, stmts, NULL, NULL
+        { json, getType, codeGen, delete, loc, NULL }, cond, stmts, NULL
     };
     return (AST *)node;
 }

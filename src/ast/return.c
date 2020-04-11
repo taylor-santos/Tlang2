@@ -9,7 +9,6 @@ typedef struct ASTReturn ASTReturn;
 struct ASTReturn {
     AST super;
     AST *expr;  // NULLable
-    Type *type; // NULL until type checker is executed.
 };
 
 static void
@@ -53,7 +52,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             free(givenName);
             return 1;
         }
-        *typeptr = state->retType = ast->type = copy_type(retType);
+        *typeptr = state->retType = retType;
         return 0;
     }
     // Returns nothing
@@ -70,8 +69,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* RETURN NOT IMPLEMENTED */");
 }
 
 static void
@@ -79,9 +78,6 @@ delete(void *this) {
     ASTReturn *ast = this;
     if (NULL != ast->expr) {
         delete_AST(ast->expr);
-    }
-    if (NULL != ast->type) {
-        delete_type(ast->type);
     }
     free(this);
 }
@@ -92,7 +88,7 @@ new_ASTReturn(YYLTYPE loc, AST *expr) {
 
     ret = safe_malloc(sizeof(*ret));
     *ret = (ASTReturn){
-        { json, getType, codeGen, delete, loc }, expr, NULL
+        { json, getType, codeGen, delete, loc, NULL }, expr
     };
     return (AST *)ret;
 }

@@ -9,7 +9,6 @@ typedef struct ASTBool ASTBool;
 struct ASTBool {
     AST super;
     int val;
-    Type *type;
 };
 
 static void
@@ -32,24 +31,24 @@ static int
 getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     ASTBool *ast = this;
     char *msg;
-    if (ast->type->verify(ast->type, state, &msg)) {
+    if (ast->super.type->verify(ast->super.type, state, &msg)) {
         print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
     }
-    *typeptr = ast->type;
+    *typeptr = ast->super.type;
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* BOOL NOT IMPLEMENTED */");
 }
 
 static void
 delete(void *this) {
     ASTBool *ast = this;
-    delete_type(ast->type);
+    delete_type(ast->super.type);
     free(ast);
 }
 
@@ -62,7 +61,7 @@ new_ASTBool(YYLTYPE loc, int val) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTBool){
-        { json, getType, codeGen, delete, loc }, val, type
+        { json, getType, codeGen, delete, loc, NULL }, val
     };
     return (AST *)node;
 }

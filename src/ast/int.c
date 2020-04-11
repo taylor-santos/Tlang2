@@ -9,7 +9,6 @@ typedef struct ASTInt ASTInt;
 struct ASTInt {
     AST super;
     long long int val;
-    Type *type;
 };
 
 static void
@@ -28,24 +27,25 @@ static int
 getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTInt *ast = this;
     char *msg;
-    if (ast->type->verify(ast->type, state, &msg)) {
+    if (ast->super.type->verify(ast->super.type, state, &msg)) {
         print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
     }
-    *typeptr = ast->type;
+    *typeptr = ast->super.type;
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    ASTInt *ast = this;
+    return safe_asprintf("new_int(%lld)", ast->val);
 }
 
 static void
 delete(void *this) {
     ASTInt *ast = this;
-    delete_type(ast->type);
+    delete_type(ast->super.type);
     free(this);
 }
 
@@ -58,7 +58,7 @@ new_ASTInt(YYLTYPE loc, long long int val) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
-        { json, getType, codeGen, delete, loc }, val, type
+        { json, getType, codeGen, delete, loc, type }, val
     };
     return (AST *)node;
 }

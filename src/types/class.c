@@ -125,13 +125,18 @@ toString(const void *type) {
         MapIterData field = it->next(it);
         Type *fieldType = field.value;
         char *typeName = fieldType->toString(fieldType);
-        append_vstr(&str, "%s%.*s:%s", sep, field.len, field.key, typeName);
+        vappend_str(&str, "%s%.*s:%s", sep, field.len, field.key, typeName);
         free(typeName);
         sep = ",";
     }
     it->delete(it);
     append_str(&str, "}");
     return str.str;
+}
+
+static char *
+codeGen(UNUSED const void *this, UNUSED const char *name) {
+    return NULL;
 }
 
 static void
@@ -176,6 +181,7 @@ new_ClassType(YYLTYPE loc,
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_CLASS,
             NULL,

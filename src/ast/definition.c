@@ -70,7 +70,13 @@ handle_spread(const struct SpreadType *spread,
                 size_t len = strlen(name);
                 type->init = 1;
                 char *msg;
-                if (AddSymbol(name, len, type, state, &msg)) {
+                Type *type_copy = copy_type(type);
+                if (AddSymbol(state->symbols,
+                    name,
+                    len,
+                    type_copy,
+                    state,
+                    &msg)) {
                     print_code_error(stderr, ast->super.loc, msg);
                     free(msg);
                     status = 1;
@@ -113,7 +119,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             size_t len = strlen(name);
             expr_type->init = 1;
             char *msg;
-            if (AddSymbol(name, len, expr_type, state, &msg)) {
+            Type *type_copy = copy_type(expr_type);
+            if (AddSymbol(state->symbols, name, len, type_copy, state, &msg)) {
                 print_code_error(stderr, ast->super.loc, msg);
                 free(msg);
                 status = 1;
@@ -125,8 +132,20 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, CodeGenState *state) {
+    ASTDefinition *ast = this;
+    char *code = ast->expr->codeGen(ast->expr, out, state);
+    fprintf(out, "%*s", state->indent * 4, "");
+    size_t n = Vector_size(ast->vars);
+    for (size_t i = 0; i < n; i++) {
+        char *var = Vector_get(ast->vars, i);
+        if (NULL != var) {
+            fprintf(out, "var_%s = ", var);
+        }
+    }
+    fprintf(out, "%s;\n", code);
+    free(code);
+    return NULL;
 }
 
 static void
@@ -143,7 +162,16 @@ new_ASTDefinition(YYLTYPE loc, Vector *vars, AST *expr) {
 
     definition = safe_malloc(sizeof(*definition));
     *definition = (ASTDefinition){
-        { json, getType, codeGen, delete, loc }, vars, expr
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        vars,
+        expr
     };
     return (AST *)definition;
 }

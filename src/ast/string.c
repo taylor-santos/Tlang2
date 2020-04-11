@@ -10,7 +10,6 @@ typedef struct ASTString ASTString;
 struct ASTString {
     AST super;
     dstring str;
-    Type *type;
 };
 
 static void
@@ -29,25 +28,43 @@ static int
 getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
     ASTString *ast = this;
     char *msg;
-    if (ast->type->verify(ast->type, state, &msg)) {
+    if (ast->super.type->verify(ast->super.type, state, &msg)) {
         print_code_error(stderr, ast->super.loc, msg);
         free(msg);
         return 1;
     }
-    *typeptr = ast->type;
+    *typeptr = ast->super.type;
     return 0;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, CodeGenState *state) {
+    ASTString *ast = this;
+    char *tmp = safe_asprintf("temp%d", state->tempCount);
+    state->tempCount++;
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "char *%s;\n", tmp);
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "if (NULL == (%s = strdup(\"%s\"))) {\n", tmp, ast->str.str);
+    state->indent++;
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "ERROR(\"strdup\");\n");
+    state->indent--;
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "}\n");
+    char *ret = safe_asprintf("temp%d", state->tempCount);
+    state->tempCount++;
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "class_string %s = new_string(%s);\n", ret, tmp);
+    free(tmp);
+    return ret;
 }
 
 static void
 delete(void *this) {
     ASTString *ast = this;
     delete_dstring(ast->str);
-    delete_type(ast->type);
+    delete_type(ast->super.type);
     free(this);
 }
 
@@ -60,7 +77,15 @@ new_ASTString(YYLTYPE loc, dstring str) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTString){
-        { json, getType, codeGen, delete, loc }, str, type
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            type
+        },
+        str
     };
     return (AST *)node;
 }

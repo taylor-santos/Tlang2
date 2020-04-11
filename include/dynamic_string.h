@@ -18,7 +18,7 @@ void
 append_str(dstring *str, const char *s);
 
 void
-append_vstr(dstring *str, const char *fmt, ...);
+vappend_str(dstring *str, const char *fmt, ...);
 
 void
 delete_dstring(dstring str);

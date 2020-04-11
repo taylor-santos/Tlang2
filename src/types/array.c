@@ -49,6 +49,11 @@ toString(const void *type) {
     return name;
 }
 
+static char *
+codeGen(UNUSED const void *this, UNUSED const char *name) {
+    return NULL;
+}
+
 static void
 delete(void *type) {
     struct ArrayType *this = type;
@@ -77,6 +82,7 @@ copy(const void *type) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_ARRAY,
             qualifiers,
@@ -100,6 +106,7 @@ new_ArrayType(YYLTYPE loc, Type *type) {
             compare,
             verify,
             toString,
+            codeGen,
             delete,
             TYPE_ARRAY,
             NULL,

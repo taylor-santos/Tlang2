@@ -11,7 +11,6 @@ struct ASTConstIndex {
     AST super;
     AST *expr;
     long long int index;
-    Type *type; // NULL until type checker is executed.
 };
 
 static void
@@ -52,7 +51,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 0;
     } else if (TYPE_ARRAY == type->type) {
         const struct ArrayType *array = (const struct ArrayType *)type;
-        *typeptr = ast->type =
+        *typeptr = ast->super.type =
             MaybeType(ast->super.loc, copy_type(array->type));
         return 0;
     }
@@ -66,16 +65,16 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* CONST INDEX NOT IMPLEMENTED */");
 }
 
 static void
 delete(void *this) {
     ASTConstIndex *ast = this;
     delete_AST(ast->expr);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
     }
     free(this);
 }
@@ -86,7 +85,7 @@ new_ASTConstIndex(YYLTYPE loc, AST *expr, long long int index) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTConstIndex){
-        { json, getType, codeGen, delete, loc }, expr, index, NULL
+        { json, getType, codeGen, delete, loc, NULL }, expr, index
     };
     return (AST *)node;
 }

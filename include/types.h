@@ -36,6 +36,7 @@ struct Type {
         const struct TypeCheckState *state);
     int (*verify)(void *type, const struct TypeCheckState *state, char **msg);
     char *(*toString)(const void *this);
+    char *(*codeGen)(const void *this, const char *name);
     void (*delete)(void *this);
     Types type;
     struct Vector *qualifiers; // Vector<Qualifiers*>
@@ -93,9 +94,12 @@ struct MaybeType {
     Type *type;
 };
 
-enum {
-    BUILTIN_INT, BUILTIN_BOOL, BUILTIN_DOUBLE, BUILTIN_STRING
-} Builtins;
+enum BUILTIN_TYPE {
+    BUILTIN_INT = 1 << 0,
+    BUILTIN_BOOL = 1 << 1,
+    BUILTIN_DOUBLE = 1 << 2,
+    BUILTIN_STRING = 1 << 3
+};
 #define NUM_BUILTINS 4
 
 typedef struct TypeCheckState {
@@ -116,6 +120,12 @@ typedef struct TypeCheckState {
     // value on all code paths.
     Type *retType;
 } TypeCheckState;
+
+typedef struct CodeGenState {
+    int indent;
+    unsigned int tempCount;
+    unsigned int funcCount;
+} CodeGenState;
 
 void
 json_type(const Type *type, FILE *out, int indent);
@@ -153,7 +163,8 @@ AddComparison(const struct ClassType *type, TypeCheckState *state);
  * function.
  */
 int
-AddSymbol(const char *symbol,
+AddSymbol(struct Map *symbols,
+    const char *symbol,
     size_t len,
     Type *type,
     const TypeCheckState *state,

@@ -5,6 +5,7 @@
 #include "json.h"
 #include "parser.h"
 #include "map.h"
+#include "types.h"
 
 typedef struct ASTProgram ASTProgram;
 
@@ -38,29 +39,83 @@ struct Operator {
     const char *op;
     const char *assign_op;
 } operators[] = {
-    { PLUS,   "+", "+=" },
-    { MINUS,  "-", "-=" },
-    { TIMES,  "*", "*=" },
-    { DIVIDE, "/", "/=" }
+    {
+        PLUS,
+        "+",
+        "+="
+    },
+    {
+        MINUS,
+        "-",
+        "-="
+    },
+    {
+        TIMES,
+        "*",
+        "*="
+    },
+    {
+        DIVIDE,
+        "/",
+        "/="
+    }
 };
 
 struct Builtin {
+    enum BUILTIN_TYPE type;
     char *name;
-    unsigned int toBool: 1;
+    char *ctype;
+    char *fmt;
     enum OPTYPE operators;
+    enum BUILTIN_TYPE casts;
 } builtins[] = {
-    { "int",    1, PLUS | MINUS | TIMES | DIVIDE },
-    { "bool",   1, 0 },
-    { "double", 1, PLUS | MINUS | TIMES | DIVIDE },
-    { "string", 0, PLUS },
+    {
+        BUILTIN_INT,
+        "int",
+        "long long int",
+        "%lld",
+        PLUS | MINUS | TIMES | DIVIDE,
+        BUILTIN_INT | BUILTIN_BOOL | BUILTIN_DOUBLE | BUILTIN_STRING
+    },
+    {
+        BUILTIN_BOOL,
+        "bool",
+        "unsigned char",
+        "%d",
+        0,
+        BUILTIN_INT | BUILTIN_BOOL | BUILTIN_DOUBLE | BUILTIN_STRING
+    },
+    {
+        BUILTIN_DOUBLE,
+        "double",
+        "double",
+        "%f",
+        PLUS | MINUS | TIMES | DIVIDE,
+        BUILTIN_INT | BUILTIN_BOOL | BUILTIN_DOUBLE | BUILTIN_STRING
+    },
+    {
+        BUILTIN_STRING,
+        "string",
+        "char*",
+        "%s",
+        PLUS,
+        BUILTIN_STRING
+    },
 };
 
 static TypeCheckState
 addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
     TypeCheckState state = {
-        symbols, NULL, classes, functions, {
+        symbols,
+        NULL,
+        classes,
+        functions,
+        {
             NULL
-        }, compare, NULL, NULL
+        },
+        compare,
+        NULL,
+        NULL
     };
     YYLTYPE loc = {
         0
@@ -88,16 +143,21 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
         struct Builtin builtin = builtins[i];
         const struct ClassType *class = state.builtins[i];
-        if (builtin.toBool) {
-            Type *retType = ObjectType(loc, safe_strdup("bool"), Vector());
-            retType->verify(retType, &state, NULL);
-            Type *fieldType = FuncType(loc, Vector(), Vector(), retType);
-            char *fieldName = "=>";
-            Map_put(class->fieldTypes,
-                fieldName,
-                strlen(fieldName),
-                fieldType,
-                NULL);
+        for (size_t j = 0; j < sizeof(builtins) / sizeof(*builtins); j++) {
+            struct Builtin cast = builtins[j];
+            if (builtin.casts & cast.type) {
+                Type *retType =
+                    ObjectType(loc, safe_strdup(cast.name), Vector());
+                retType->verify(retType, &state, NULL);
+                Type *fieldType = FuncType(loc, Vector(), Vector(), retType);
+                char *fieldName = "=>";
+                AddSymbol(class->fieldTypes,
+                    fieldName,
+                    strlen(fieldName),
+                    fieldType,
+                    &state,
+                    NULL);
+            }
         }
         for (size_t j = 0; j < sizeof(operators) / sizeof(*operators); j++) {
             if (builtin.operators & operators[j].type) {
@@ -213,8 +273,358 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
+    ASTProgram *ast = this;
+    size_t n;
+    CodeGenState newState = (CodeGenState){
+        0,
+        0,
+        0
+    };
+
+    fprintf(out, "#include <stdio.h>\n");
+    fprintf(out, "#include <stdlib.h>\n");
+    fprintf(out, "#include <string.h>\n");
+    fprintf(out, "\n");
+    fprintf(out, "#define ERROR(msg) { \\\n");
+    newState.indent++;
+    fprintf(out, "%*s", newState.indent * 4, "");
+    fprintf(out, "perror(msg); \\\n");
+    fprintf(out, "%*s", newState.indent * 4, "");
+    fprintf(out, "exit(EXIT_FAILURE); \\\n");
+    newState.indent--;
+    fprintf(out, "}\n");
+    fprintf(out, "#define CALL(closure, args) closure.fn(closure, args)\n");
+    fprintf(out, "\n");
+    fprintf(out, "typedef struct closure {\n");
+    newState.indent++;
+    fprintf(out, "%*s", newState.indent * 4, "");
+    fprintf(out, "void *(*fn)(struct closure, void**);\n");
+    fprintf(out, "%*s", newState.indent * 4, "");
+    fprintf(out, "void **env;\n");
+    newState.indent--;
+    fprintf(out, "} closure;\n");
+    fprintf(out, "\n");
+    for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
+        struct Builtin builtin = builtins[i];
+        fprintf(out, "struct class_%s *\n", builtin.name);
+        fprintf(out, "new_%s(%s val);\n", builtin.name, builtin.ctype);
+        fprintf(out, "\n");
+    }
+    for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
+        struct Builtin builtin = builtins[i];
+        fprintf(out, "typedef struct class_%s {\n", builtin.name);
+        newState.indent++;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%s val;\n", builtin.ctype);
+        size_t opCount = sizeof(operators) / sizeof(*operators);
+        for (size_t j = 0; j < opCount; j++) {
+            if (builtin.operators & operators[j].type) {
+                char op[strlen(operators[j].op) * 2 + 1];
+                strident(operators[j].op, op);
+                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out,
+                    "void *(*field_%s)(closure env, void **args);\n",
+                    op);
+
+                char assign_op[strlen(operators[j].assign_op) * 2 + 1];
+                strident(operators[j].assign_op, assign_op);
+                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out,
+                    "void *(*field_%s)(closure env, void **args);\n",
+                    assign_op);
+            }
+        }
+        for (size_t j = 0; j < sizeof(builtins) / sizeof(*builtins); j++) {
+            struct Builtin cast = builtins[j];
+            if (builtin.casts & cast.type) {
+                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out,
+                    "void *(*cast_class_%s)(closure env, void **args);\n",
+                    cast.name);
+            }
+        }
+        newState.indent--;
+        fprintf(out, "} *class_%s;\n", builtin.name);
+        fprintf(out, "\n");
+        if (builtin.type == BUILTIN_STRING) {
+            char assign_op[strlen("+=") * 2 + 1];
+            strident("+=", assign_op);
+            fprintf(out, "void *\n");
+            fprintf(out,
+                "class_%s_field_%s(closure env, void **args) {\n",
+                builtin.name,
+                assign_op);
+            newState.indent++;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "class_%s other = args[0];\n", builtin.name);
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "size_t size = strlen(this->val);\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out,
+                "if (NULL == (this->val = realloc(this->val, size + strlen"
+                "(other->val) + 1))) {\n");
+            newState.indent++;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "ERROR(\"realloc\");\n");
+            newState.indent--;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "}\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "strcpy(this->val + size, other->val);\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "return this;\n");
+            newState.indent--;
+            fprintf(out, "}\n");
+            fprintf(out, "\n");
+
+            char op[strlen("+") * 2 + 1];
+            strident("+", op);
+            fprintf(out, "void *\n");
+            fprintf(out,
+                "class_%s_field_%s(closure env, void **args) {\n",
+                builtin.name,
+                op);
+            newState.indent++;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "class_%s other = args[0];\n", builtin.name);
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "size_t size1 = strlen(this->val),\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "       size2 = strlen(other->val);\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "char *val;\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "if (NULL == (val = malloc(size1 + size2 + 1))) {\n");
+            newState.indent++;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "ERROR(\"malloc\");\n");
+            newState.indent--;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "}\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "strcpy(val, this->val);\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "strcpy(val + size1, other->val);\n");
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "return new_string(val);\n");
+            newState.indent--;
+            fprintf(out, "}\n");
+            fprintf(out, "\n");
+
+            fprintf(out, "void *\n");
+            fprintf(out,
+                "class_%s_cast_class_string(closure env, void **args) {\n",
+                builtin.name);
+            newState.indent++;
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
+            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "return new_string(this->val);\n");
+            newState.indent--;
+            fprintf(out, "}\n");
+            fprintf(out, "\n");
+        } else {
+            for (size_t j = 0; j < opCount; j++) {
+                if (builtin.operators & operators[j].type) {
+                    char assign_op[strlen(operators[j].assign_op) * 2 + 1];
+                    strident(operators[j].assign_op, assign_op);
+                    fprintf(out, "void *\n");
+                    fprintf(out,
+                        "class_%s_field_%s(closure env, void **args) {\n",
+                        builtin.name,
+                        assign_op);
+                    newState.indent++;
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out,
+                        "class_%s this = env.env[0];\n",
+                        builtin.name);
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "class_%s other = args[0];\n", builtin.name);
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out,
+                        "this->val %s other->val;\n",
+                        operators[j].assign_op);
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "return this;\n");
+                    newState.indent--;
+                    fprintf(out, "}\n");
+                    fprintf(out, "\n");
+
+                    char op[strlen(operators[j].op) * 2 + 1];
+                    strident(operators[j].op, op);
+                    fprintf(out, "void *\n");
+                    fprintf(out,
+                        "class_%s_field_%s(closure env, void **args) {\n",
+                        builtin.name,
+                        op);
+                    newState.indent++;
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out,
+                        "class_%s this = env.env[0];\n",
+                        builtin.name);
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "class_%s other = args[0];\n", builtin.name);
+                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out,
+                        "return new_%s(this->val %s other->val);\n",
+                        builtin.name,
+                        operators[j].op);
+                    newState.indent--;
+                    fprintf(out, "}\n");
+                    fprintf(out, "\n");
+                }
+            }
+            for (size_t j = 0; j < sizeof(builtins) / sizeof(*builtins); j++) {
+                struct Builtin cast = builtins[j];
+                if (builtin.casts & cast.type) {
+                    if (cast.type == BUILTIN_STRING) {
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "void *\n");
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "class_%s_cast_class_%s(closure env, void **args) "
+                            "{\n",
+                            builtin.name,
+                            cast.name);
+                        newState.indent++;
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "class_%s this = env.env[0];\n",
+                            builtin.name);
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "size_t size = snprintf(NULL, 0, \"%s\", this->val);"
+                            "\n",
+                            builtin.fmt);
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "char *val;\n");
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "if (NULL == (val = malloc(size + 1))) {\n");
+                        newState.indent++;
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "ERROR(\"malloc\");\n");
+                        newState.indent--;
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "}\n");
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "sprintf(val, \"%s\", this->val);\n",
+                            builtin.fmt);
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "return new_string(val);\n");
+                        newState.indent--;
+                        fprintf(out, "}\n");
+                        fprintf(out, "\n");
+                    } else {
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "void *\n");
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "class_%s_cast_class_%s(closure env, void "
+                            "**args) {\n",
+                            builtin.name,
+                            cast.name);
+                        newState.indent++;
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "class_%s this = env.env[0];\n",
+                            builtin.name);
+                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out,
+                            "return new_%s((%s)this->val);\n",
+                            cast.name,
+                            cast.ctype);
+                        newState.indent--;
+                        fprintf(out, "}\n");
+                        fprintf(out, "\n");
+                    }
+                }
+            }
+        }
+        fprintf(out, "class_%s\n", builtin.name);
+        fprintf(out, "new_%s(%s val) {\n", builtin.name, builtin.ctype);
+        newState.indent++;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "class_%s ret;\n", builtin.name);
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "if (NULL == (ret = malloc(sizeof(*ret)))) {\n");
+        newState.indent++;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "ERROR(\"malloc\");\n");
+        newState.indent--;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "}\n");
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "*ret = (struct class_%s) {\n", builtin.name);
+        newState.indent++;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "val,\n");
+        for (size_t j = 0; j < opCount; j++) {
+            if (builtin.operators & operators[j].type) {
+                char op[strlen(operators[j].op) * 2 + 1];
+                strident(operators[j].op, op);
+                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "class_%s_field_%s,\n", builtin.name, op);
+
+                char assign_op[strlen(operators[j].assign_op) * 2 + 1];
+                strident(operators[j].assign_op, assign_op);
+                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "class_%s_field_%s,\n", builtin.name, assign_op);
+            }
+        }
+        for (size_t j = 0; j < sizeof(builtins) / sizeof(*builtins); j++) {
+            struct Builtin cast = builtins[j];
+            if (builtin.casts & cast.type) {
+                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out,
+                    "class_%s_cast_class_%s,\n",
+                    builtin.name,
+                    cast.name);
+            }
+        }
+
+        newState.indent--;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "};\n");
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "return ret;\n");
+        newState.indent--;
+        fprintf(out, "}\n");
+        fprintf(out, "\n");
+    }
+
+    fprintf(out, "int\nmain(int argc, char *argv[]) {\n");
+    newState.indent++;
+    Iterator *it = Map_iterator(ast->symbols);
+    int hasVars = it->hasNext(it);
+    if (hasVars) {
+        fprintf(out, "%*svoid", newState.indent * 4, "");
+    }
+    char *sep = "";
+    while (it->hasNext(it)) {
+        MapIterData data = it->next(it);
+        fprintf(out, "%s *var_%.*s", sep, (int)data.len, (char *)data.key);
+        sep = ",";
+    }
+    it->delete(it);
+    if (hasVars) {
+        fprintf(out, ";\n");
+    }
+    n = Vector_size(ast->stmts);
+    for (size_t i = 0; i < n; i++) {
+        AST *stmt = Vector_get(ast->stmts, i);
+        char *code = stmt->codeGen(stmt, out, &newState);
+        free(code);
+    }
+    newState.indent--;
+    fprintf(out, "}\n");
+    return NULL;
 }
 
 static void
@@ -245,7 +655,14 @@ new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     functions = Vector();
     compare = Map();
     *program = (ASTProgram){
-        { json, getType, codeGen, delete, loc },
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
         stmts,
         symbols,
         classes,

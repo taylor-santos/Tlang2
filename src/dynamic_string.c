@@ -32,7 +32,7 @@ append_str(dstring *str, const char *s) {
 }
 
 void
-append_vstr(dstring *str, const char *fmt, ...) {
+vappend_str(dstring *str, const char *fmt, ...) {
     size_t size;
     va_list args;
 

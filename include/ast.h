@@ -8,6 +8,7 @@ struct SparseVector;
 struct Type;
 struct dstring;
 struct TypeCheckState;
+struct CodeGenState;
 
 #define YYLTYPE YYLTYPE
 typedef struct YYLTYPE {
@@ -23,9 +24,10 @@ typedef struct AST {
     int (*getType)(void *this,
         struct TypeCheckState *state,
         struct Type **typeptr);
-    char *(*codeGen)(void *this, struct TypeCheckState *state);
+    char *(*codeGen)(void *this, FILE *out, struct CodeGenState *state);
     void (*delete)(void *this);
     struct YYLTYPE loc;
+    struct Type *type;
 } AST;
 
 struct Field {
@@ -84,6 +86,8 @@ void
 delete_AST(AST *this);
 
 #define TypeCheck(root) root->getType(root, NULL, NULL)
+
+#define CodeGen(root, out) root->codeGen(root, out, NULL)
 
 #define ASTProgram(loc, stmts) \
     new_ASTProgram(loc, stmts)

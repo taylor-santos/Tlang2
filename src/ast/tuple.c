@@ -10,7 +10,6 @@ typedef struct ASTTuple ASTTuple;
 struct ASTTuple {
     AST super;
     SparseVector *exprs; // Vector<AST*>
-    Type *type;    // NULL until type checker is executed.
 };
 
 static void
@@ -39,7 +38,7 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
         if (expr->getType(expr, state, &type)) {
             return 1;
         }
-        *typeptr = ast->type = copy_type(type);
+        *typeptr = ast->super.type = copy_type(type);
         return 0;
     }
     //Tuple has multiple values:
@@ -61,22 +60,22 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
         state,
         (SVEC_DELETE_FUNC)delete_type);
     if (0 == status) {
-        *typeptr = ast->type = TupleType(ast->super.loc, types);
+        *typeptr = ast->super.type = TupleType(ast->super.loc, types);
     }
     return status;
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED TypeCheckState *state) {
-    return safe_strdup("/* NOT IMPLEMENTED */");
+codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    return safe_strdup("/* TUPLE NOT IMPLEMENTED */");
 }
 
 static void
 delete(void *this) {
     ASTTuple *ast = this;
     delete_SparseVector(ast->exprs, (SVEC_DELETE_FUNC)delete_AST);
-    if (NULL != ast->type) {
-        delete_type(ast->type);
+    if (NULL != ast->super.type) {
+        delete_type(ast->super.type);
     }
     free(this);
 }
@@ -87,7 +86,7 @@ new_ASTTuple(YYLTYPE loc, SparseVector *exprs) {
 
     tuple = safe_malloc(sizeof(*tuple));
     *tuple = (ASTTuple){
-        { json, getType, codeGen, delete, loc }, exprs, NULL
+        { json, getType, codeGen, delete, loc, NULL }, exprs
     };
     return (AST *)tuple;
 }
