@@ -77,7 +77,7 @@ handle_spread(const struct SpreadType *spread,
                     type_copy,
                     state,
                     &msg)) {
-                    print_code_error(stderr, ast->super.loc, msg);
+                    print_code_error(stderr, ast->super.loc, "%s", msg);
                     free(msg);
                     status = 1;
                 }
@@ -101,6 +101,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     if (expr_type == NULL) {
         print_code_error(stderr,
             ast->super.loc,
+            "%s",
             "assigning to variable from none");
         return 1;
     }
@@ -121,7 +122,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             char *msg;
             Type *type_copy = copy_type(expr_type);
             if (AddSymbol(state->symbols, name, len, type_copy, state, &msg)) {
-                print_code_error(stderr, ast->super.loc, msg);
+                print_code_error(stderr, ast->super.loc, "%s", msg);
                 free(msg);
                 status = 1;
             }

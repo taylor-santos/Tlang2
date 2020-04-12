@@ -813,5 +813,5 @@ void yyerror(YYLTYPE *locp,
     UNUSED yyscan_t scanner,
     const char *msg
 ) {
-    print_code_error(stderr, *locp, msg);
+    print_code_error(stderr, *locp, "%s", msg);
 }

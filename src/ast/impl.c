@@ -37,6 +37,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     ASTImpl *ast = this;
     print_code_error(stderr,
         ast->super.loc,
+        "%s",
         "impl type checker not implemented");
     return 1;
 }
@@ -61,7 +62,17 @@ new_ASTImpl(YYLTYPE loc, char *name, Vector *generics, Vector *stmts) {
 
     impl = safe_malloc(sizeof(*impl));
     *impl = (ASTImpl){
-        { json, getType, codeGen, delete, loc, NULL }, name, generics, stmts
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        name,
+        generics,
+        stmts
     };
     return (AST *)impl;
 }

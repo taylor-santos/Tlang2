@@ -83,15 +83,18 @@ toString(const void *type) {
 static char *
 codeGen(const void *this, const char *name) {
     const struct ObjectType *type = this;
-    const char *ident = NULL == name
-        ? ""
-        : name;
-    return safe_asprintf("class_%s%s%s",
-        type->name,
-        NULL == name
-            ? ""
-            : " ",
-        ident);
+    if (NULL != type->class->name) {
+        return safe_asprintf("class_%s%s%s",
+            type->class->name,
+            NULL == name
+                ? ""
+                : " ",
+            NULL == name
+                ? ""
+                : name);
+    } else {
+        return safe_strdup("/* CLASS NAME ID NOT IMPLEMENTED */");
+    }
 }
 
 static void
@@ -130,7 +133,10 @@ copy(const void *type) {
             this->super.init,
             1,
             this->super.loc
-        }, this->name, this->generics, this->class
+        },
+        this->name,
+        this->generics,
+        this->class
     };
     return (Type *)type_copy;
 }
@@ -154,7 +160,10 @@ new_ObjectType(YYLTYPE loc, char *name, struct Vector *generics) {
             0,
             0,
             loc
-        }, name, generics, NULL
+        },
+        name,
+        generics,
+        NULL
     };
     return (Type *)type;
 }

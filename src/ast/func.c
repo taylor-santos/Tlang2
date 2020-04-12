@@ -50,6 +50,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         // TODO: generic functions
         print_code_error(stderr,
             ast->super.loc,
+            "%s",
             "generic func type checker not implemented");
         return 1;
     }
@@ -59,7 +60,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     for (size_t i = 0; i < nargs; i++) {
         struct Field *arg = Vector_get(ast->args, i);
         if (arg->type->verify(arg->type, state, &msg)) {
-            print_code_error(stderr, ast->super.loc, msg);
+            print_code_error(stderr, ast->super.loc, "%s", msg);
             free(msg);
             status = 1;
         } else {
@@ -80,7 +81,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         }
     }
     if (ast->ret_type->verify(ast->ret_type, state, &msg)) {
-        print_code_error(stderr, ast->ret_type->loc, msg);
+        print_code_error(stderr, ast->ret_type->loc, "%s", msg);
         free(msg);
         status = 1;
     }
@@ -158,8 +159,18 @@ new_ASTFunc(YYLTYPE loc,
     func = safe_malloc(sizeof(*func));
     *func = (ASTFunc){
         {
-            json, getType, codeGen, delete, loc, NULL
-        }, generics, args, ret_type, stmts, NULL
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        generics,
+        args,
+        ret_type,
+        stmts,
+        NULL
     };
     return (AST *)func;
 }

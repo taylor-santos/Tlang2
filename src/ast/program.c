@@ -127,8 +127,10 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
         Vector *fields = Vector();
         Vector *ctors = Vector();
         Type *type = ClassType(loc, gen, supers, fields, ctors);
+        type->init = 1;
         Map_put(state.symbols, builtin.name, strlen(builtin.name), type, NULL);
         struct ClassType *class = (struct ClassType *)type;
+        class->name = safe_strdup(builtin.name);
         state.builtins[i] = class;
         Map_put(compare, &class, sizeof(class), Map(), NULL);
         char *msg;
@@ -308,7 +310,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
         struct Builtin builtin = builtins[i];
         fprintf(out, "struct class_%s *\n", builtin.name);
-        fprintf(out, "new_%s(%s val);\n", builtin.name, builtin.ctype);
+        fprintf(out, "builtin_%s(%s val);\n", builtin.name, builtin.ctype);
         fprintf(out, "\n");
     }
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
@@ -411,7 +413,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             fprintf(out, "%*s", newState.indent * 4, "");
             fprintf(out, "strcpy(val + size1, other->val);\n");
             fprintf(out, "%*s", newState.indent * 4, "");
-            fprintf(out, "return new_string(val);\n");
+            fprintf(out, "return builtin_string(val);\n");
             newState.indent--;
             fprintf(out, "}\n");
             fprintf(out, "\n");
@@ -424,7 +426,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             fprintf(out, "%*s", newState.indent * 4, "");
             fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
             fprintf(out, "%*s", newState.indent * 4, "");
-            fprintf(out, "return new_string(this->val);\n");
+            fprintf(out, "return builtin_string(this->val);\n");
             newState.indent--;
             fprintf(out, "}\n");
             fprintf(out, "\n");
@@ -471,7 +473,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                     fprintf(out, "class_%s other = args[0];\n", builtin.name);
                     fprintf(out, "%*s", newState.indent * 4, "");
                     fprintf(out,
-                        "return new_%s(this->val %s other->val);\n",
+                        "return builtin_%s(this->val %s other->val);\n",
                         builtin.name,
                         operators[j].op);
                     newState.indent--;
@@ -517,7 +519,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                             "sprintf(val, \"%s\", this->val);\n",
                             builtin.fmt);
                         fprintf(out, "%*s", newState.indent * 4, "");
-                        fprintf(out, "return new_string(val);\n");
+                        fprintf(out, "return builtin_string(val);\n");
                         newState.indent--;
                         fprintf(out, "}\n");
                         fprintf(out, "\n");
@@ -537,7 +539,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                             builtin.name);
                         fprintf(out, "%*s", newState.indent * 4, "");
                         fprintf(out,
-                            "return new_%s((%s)this->val);\n",
+                            "return builtin_%s((%s)this->val);\n",
                             cast.name,
                             cast.ctype);
                         newState.indent--;
@@ -548,7 +550,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             }
         }
         fprintf(out, "class_%s\n", builtin.name);
-        fprintf(out, "new_%s(%s val) {\n", builtin.name, builtin.ctype);
+        fprintf(out, "builtin_%s(%s val) {\n", builtin.name, builtin.ctype);
         newState.indent++;
         fprintf(out, "%*s", newState.indent * 4, "");
         fprintf(out, "class_%s ret;\n", builtin.name);
@@ -588,7 +590,6 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                     cast.name);
             }
         }
-
         newState.indent--;
         fprintf(out, "%*s", newState.indent * 4, "");
         fprintf(out, "};\n");
@@ -597,24 +598,40 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
         newState.indent--;
         fprintf(out, "}\n");
         fprintf(out, "\n");
+
+        fprintf(out, "void *\n");
+        fprintf(out, "new_%s(closure env, void **args) {\n", builtin.name);
+        newState.indent++;
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "return builtin_%s(0);\n", builtin.name);
+        newState.indent--;
+        fprintf(out, "}\n");
+        fprintf(out, "\n");
     }
 
     fprintf(out, "int\nmain(int argc, char *argv[]) {\n");
     newState.indent++;
     Iterator *it = Map_iterator(ast->symbols);
-    int hasVars = it->hasNext(it);
-    if (hasVars) {
-        fprintf(out, "%*svoid", newState.indent * 4, "");
-    }
-    char *sep = "";
     while (it->hasNext(it)) {
         MapIterData data = it->next(it);
-        fprintf(out, "%s *var_%.*s", sep, (int)data.len, (char *)data.key);
-        sep = ",";
+        Type *type = data.value;
+        char
+            *name = safe_asprintf("var_%.*s", (int)data.len, (char *)data.key);
+        char *typeName = type->codeGen(type, name);
+        free(name);
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%s;\n", typeName);
+        free(typeName);
     }
     it->delete(it);
-    if (hasVars) {
-        fprintf(out, ";\n");
+    fprintf(out, "\n");
+    for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
+        struct Builtin builtin = builtins[i];
+        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out,
+            "var_%s = (closure){ new_%s, NULL };\n",
+            builtin.name,
+            builtin.name);
     }
     n = Vector_size(ast->stmts);
     for (size_t i = 0; i < n; i++) {

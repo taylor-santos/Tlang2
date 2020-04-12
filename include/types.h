@@ -55,6 +55,7 @@ struct FuncType {
 
 struct ClassType {
     Type super;
+    char *name; // NULLable
     struct Vector *generics; // Vector<char*>
     struct Vector *supers;   // Vector<char*>
     struct Vector *fields;   // Vector<Field*>

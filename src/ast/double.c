@@ -28,7 +28,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     ASTDouble *ast = this;
     char *msg;
     if (ast->super.type->verify(ast->super.type, state, &msg)) {
-        print_code_error(stderr, ast->super.loc, msg);
+        print_code_error(stderr, ast->super.loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -39,7 +39,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
 static char *
 codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
     ASTDouble *ast = this;
-    return safe_asprintf("new_double(%f)", ast->val);
+    return safe_asprintf("builtin_double(%f)", ast->val);
 }
 
 static void

@@ -85,6 +85,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         if (found) {
             print_code_error(stderr,
                 ast->super.loc,
+                "%s",
                 "overloaded function call is ambiguous");
             status = 1;
             continue;
@@ -106,7 +107,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
             sep = ", ";
         }
         append_str(&str, ")");
-        print_code_error(stderr, ast->super.loc, str.str);
+        print_code_error(stderr, ast->super.loc, "%s", str.str);
         free(str.str);
         status = 1;
     }

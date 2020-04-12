@@ -34,7 +34,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTArray *ast = this;
     char *msg;
     if (ast->array_type->verify(ast->array_type, state, &msg)) {
-        print_code_error(stderr, ast->array_type->loc, msg);
+        print_code_error(stderr, ast->array_type->loc, "%s", msg);
         return 1;
     }
     Type *type_copy = ast->array_type->copy(ast->array_type);
@@ -63,7 +63,16 @@ new_ASTArray(struct YYLTYPE loc, Type *array_type, long long int index) {
 
     array = safe_malloc(sizeof(*array));
     *array = (ASTArray){
-        { json, getType, codeGen, delete, loc, NULL }, array_type, index
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        array_type,
+        index
     };
     return (AST *)array;
 }

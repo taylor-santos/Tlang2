@@ -117,8 +117,9 @@ exprCase(struct Case *c,
         state)) {
         print_code_error(stderr,
             c->expr->loc,
-            "switch expression's \"==\" operator does not return a \"boolean"
-            " instance\"");
+            "%s",
+            "switch expression's \"==\" operator does not return a \"boolean "
+            "instance\"");
         return 1;
     }
     return typeCheckStmts(c->stmts, state);
@@ -128,7 +129,7 @@ static int
 typeCase(struct Case *c, Type *exprType, TypeCheckState *state) {
     char *msg;
     if (c->type.type->verify(c->type.type, state, &msg)) {
-        print_code_error(stderr, c->expr->loc, msg);
+        print_code_error(stderr, c->expr->loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -288,7 +289,14 @@ new_ASTSwitch(YYLTYPE loc,
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTSwitch){
-        { json, getType, codeGen, delete, loc, NULL },
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
         expr,
         cases,
         def,

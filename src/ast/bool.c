@@ -32,7 +32,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     ASTBool *ast = this;
     char *msg;
     if (ast->super.type->verify(ast->super.type, state, &msg)) {
-        print_code_error(stderr, ast->super.loc, msg);
+        print_code_error(stderr, ast->super.loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -61,7 +61,15 @@ new_ASTBool(YYLTYPE loc, int val) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTBool){
-        { json, getType, codeGen, delete, loc, NULL }, val
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        val
     };
     return (AST *)node;
 }

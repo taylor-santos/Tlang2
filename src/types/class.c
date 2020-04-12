@@ -135,8 +135,12 @@ toString(const void *type) {
 }
 
 static char *
-codeGen(UNUSED const void *this, UNUSED const char *name) {
-    return NULL;
+codeGen(const void *this, const char *name) {
+    const struct ClassType *type = this;
+    if (NULL == name) {
+        return safe_strdup("closure");
+    }
+    return safe_asprintf("closure %s", name);
 }
 
 static void
@@ -155,6 +159,9 @@ delete_ClassType(struct ClassType *this) {
         delete_Vector(this->ctors, (VEC_DELETE_FUNC)delete_ctor);
         if (NULL != this->fieldTypes) {
             delete_Map(this->fieldTypes, (MAP_DELETE_FUNC)delete_type);
+        }
+        if (NULL != this->name) {
+            free(this->name);
         }
     }
     free(this);
@@ -188,7 +195,13 @@ new_ClassType(YYLTYPE loc,
             0,
             0,
             loc
-        }, generics, supers, fields, ctors, NULL
+        },
+        NULL,
+        generics,
+        supers,
+        fields,
+        ctors,
+        NULL
     };
     return (Type *)type;
 }

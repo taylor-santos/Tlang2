@@ -28,7 +28,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTInt *ast = this;
     char *msg;
     if (ast->super.type->verify(ast->super.type, state, &msg)) {
-        print_code_error(stderr, ast->super.loc, msg);
+        print_code_error(stderr, ast->super.loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -39,7 +39,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 static char *
 codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
     ASTInt *ast = this;
-    return safe_asprintf("new_int(%lld)", ast->val);
+    return safe_asprintf("builtin_int(%lld)", ast->val);
 }
 
 static void
@@ -58,7 +58,15 @@ new_ASTInt(YYLTYPE loc, long long int val) {
     type->init = 1;
     node = safe_malloc(sizeof(*node));
     *node = (ASTInt){
-        { json, getType, codeGen, delete, loc, type }, val
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            type
+        },
+        val
     };
     return (AST *)node;
 }

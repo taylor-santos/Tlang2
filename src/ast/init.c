@@ -41,7 +41,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     // ClassTypeVerify() assumes this fully checks the validity of the class.
     ASTInit *ast = this;
     Type *classType = NULL;
-    size_t len = strlen(ast->name), ngen;
+    size_t ngen, len = strlen(ast->name);
 
     if (Map_get(state->symbols, ast->name, len, &classType)) {
         print_code_error(stderr,
@@ -65,6 +65,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         // TODO: generic classes
         print_code_error(stderr,
             ast->super.loc,
+            "%s",
             "init with generics not implemented");
         return 1;
     }
@@ -88,7 +89,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             ObjectType(ast->super.loc, safe_strdup(ast->name), Vector());
         char *msg;
         if (ast->super.type->verify(ast->super.type, state, &msg)) {
-            print_code_error(stderr, ast->super.type->loc, msg);
+            print_code_error(stderr, ast->super.type->loc, "%s", msg);
             free(msg);
             return 1;
         }
@@ -114,7 +115,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
                     Vector());
                 char *msg;
                 if (ast->super.type->verify(ast->super.type, state, &msg)) {
-                    print_code_error(stderr, ast->super.type->loc, msg);
+                    print_code_error(stderr, ast->super.type->loc, "%s", msg);
                     free(msg);
                     return 1;
                 }
@@ -134,8 +135,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
-    return safe_strdup("/* INIT NOT IMPLEMENTED */");
+codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
+    ASTInit *ast = this;
+    return safe_asprintf("CALL(var_%s, 0)", ast->name);
 }
 
 static void
@@ -159,7 +161,14 @@ new_ASTInit(YYLTYPE loc, char *name, Vector *generics, Vector *args) {
 
     init = safe_malloc(sizeof(*init));
     *init = (ASTInit){
-        { json, getType, codeGen, delete, loc, NULL },
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
         name,
         generics,
         args,

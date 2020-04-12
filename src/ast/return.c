@@ -31,6 +31,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     if (NULL == state->funcType) {
         print_code_error(stderr,
             ast->super.loc,
+            "%s",
             "return statement outside of function");
         return 1;
     }
@@ -88,7 +89,15 @@ new_ASTReturn(YYLTYPE loc, AST *expr) {
 
     ret = safe_malloc(sizeof(*ret));
     *ret = (ASTReturn){
-        { json, getType, codeGen, delete, loc, NULL }, expr
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        expr
     };
     return (AST *)ret;
 }

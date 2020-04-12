@@ -20,6 +20,10 @@ extern WORD saved_attributes;
 #define RESET(FILE)  fprintf(FILE, "\033[0m")
 #endif
 #define UNUSED __attribute__ ((unused))
+#define print_code_error(out, loc, msg, ...) { \
+    fprintf(out, "%s:%d:\n", __FILE__, __LINE__); \
+    print_code_error_func(out, loc, msg, __VA_ARGS__); \
+}
 
 #include <stdio.h>
 
@@ -32,7 +36,7 @@ print_warning(const char *fmt, ...);
 int
 print_ICE(const char *fmt, ...);
 void
-print_code_error(FILE *out, struct YYLTYPE loc, const char *msg, ...);
+print_code_error_func(FILE *out, struct YYLTYPE loc, const char *msg, ...);
 void
 strident(const char *str, char *buf);
 

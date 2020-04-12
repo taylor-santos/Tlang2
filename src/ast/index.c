@@ -34,6 +34,7 @@ getType(void *this, UNUSED TypeCheckState *state, UNUSED Type **typeptr) {
     ASTIndex *ast = this;
     print_code_error(stderr,
         ast->super.loc,
+        "%s",
         "index type checker not implemented");
     return 1;
 }
@@ -57,7 +58,16 @@ new_ASTIndex(YYLTYPE loc, AST *expr, AST *index) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTIndex){
-        { json, getType, codeGen, delete, loc, NULL }, expr, index
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        expr,
+        index
     };
     return (AST *)node;
 }

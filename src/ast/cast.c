@@ -34,7 +34,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTCast *ast = this;
     char *msg;
     if (ast->super.type->verify(ast->super.type, state, &msg)) {
-        print_code_error(stderr, ast->super.type->loc, msg);
+        print_code_error(stderr, ast->super.type->loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -95,6 +95,8 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
     state->tempCount++;
     char *typeName = ast->expr->type->codeGen(ast->expr->type, tmpName);
     fprintf(out, "%s = %s;\n", typeName, code);
+    free(typeName);
+    free(code);
     char *castType = ast->super.type->codeGen(ast->super.type, NULL);
     fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out,
@@ -103,6 +105,8 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
         tmpName,
         castType,
         tmpName);
+    free(castType);
+    free(tmpName);
     char *ret = safe_asprintf("CALL(temp%d, NULL)", state->tempCount);
     state->tempCount++;
     return ret;

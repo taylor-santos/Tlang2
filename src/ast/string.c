@@ -29,7 +29,7 @@ getType(void *this, UNUSED TypeCheckState *state, Type **typeptr) {
     ASTString *ast = this;
     char *msg;
     if (ast->super.type->verify(ast->super.type, state, &msg)) {
-        print_code_error(stderr, ast->super.loc, msg);
+        print_code_error(stderr, ast->super.loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -55,7 +55,7 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
     char *ret = safe_asprintf("temp%d", state->tempCount);
     state->tempCount++;
     fprintf(out, "%*s", state->indent * 4, "");
-    fprintf(out, "class_string %s = new_string(%s);\n", ret, tmp);
+    fprintf(out, "class_string %s = builtin_string(%s);\n", ret, tmp);
     free(tmp);
     return ret;
 }

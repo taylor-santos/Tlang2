@@ -37,7 +37,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     char *msg;
 
     if (ast->super.type->verify(ast->super.type, state, &msg)) {
-        print_code_error(stderr, ast->super.type->loc, msg);
+        print_code_error(stderr, ast->super.type->loc, "%s", msg);
         free(msg);
         return 1;
     }
@@ -47,7 +47,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         size_t len = strlen(name);
         Type *type_copy = copy_type(ast->super.type);
         if (AddSymbol(state->symbols, name, len, type_copy, state, &msg)) {
-            print_code_error(stderr, ast->super.loc, msg);
+            print_code_error(stderr, ast->super.loc, "%s", msg);
             free(msg);
             status = 1;
         }
