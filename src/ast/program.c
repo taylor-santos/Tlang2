@@ -299,23 +299,24 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     state->indent--;
     fprintf(out, "}\n");
 
-    fprintf(out, "#define CALL(closure, args) closure.fn(&closure, args)\n");
+    fprintf(out, "#define CALL(closure, args) closure.fn(closure, args)\n");
     fprintf(out, "\n");
 
     fprintf(out, "struct closure;\n");
     fprintf(out, "\n");
 
-    fprintf(out, "typedef void *(FUNC)(struct closure *env, void **args);\n");
+    fprintf(out, "typedef struct closure closure;\n");
+    fprintf(out, "typedef void *FUNC(closure env, void **args);\n");
     fprintf(out, "\n");
 
-    fprintf(out, "typedef struct closure {\n");
+    fprintf(out, "struct closure {\n");
     state->indent++;
     fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out, "FUNC *fn;\n");
     fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out, "void **env;\n");
     state->indent--;
-    fprintf(out, "} closure;\n");
+    fprintf(out, "};\n");
     fprintf(out, "\n");
 
     n = Vector_size(ast->functions);
@@ -355,14 +356,14 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                 strident(operators[j].op, op);
                 fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
-                    "void *(*field_%s)(closure *env, void **args);\n",
+                    "void *(*field_%s)(closure env, void **args);\n",
                     op);
 
                 char assign_op[strlen(operators[j].assign_op) * 2 + 1];
                 strident(operators[j].assign_op, assign_op);
                 fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
-                    "void *(*field_%s)(closure *env, void **args);\n",
+                    "void *(*field_%s)(closure env, void **args);\n",
                     assign_op);
             }
         }
@@ -371,7 +372,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             if (builtin.casts & cast.type) {
                 fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
-                    "void *(*cast_class_%s)(closure *env, void **args);\n",
+                    "void *(*cast_class_%s)(closure env, void **args);\n",
                     cast.name);
             }
         }
@@ -383,12 +384,12 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             strident("+=", assign_op);
             fprintf(out, "void *\n");
             fprintf(out,
-                "class_%s_field_%s(closure *env, void **args) {\n",
+                "class_%s_field_%s(closure env, void **args) {\n",
                 builtin.name,
                 assign_op);
             state->indent++;
             fprintf(out, "%*s", state->indent * 4, "");
-            fprintf(out, "class_%s this = env->env[0];\n", builtin.name);
+            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
             fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "class_%s other = args[0];\n", builtin.name);
             fprintf(out, "%*s", state->indent * 4, "");
@@ -415,12 +416,12 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             strident("+", op);
             fprintf(out, "void *\n");
             fprintf(out,
-                "class_%s_field_%s(closure *env, void **args) {\n",
+                "class_%s_field_%s(closure env, void **args) {\n",
                 builtin.name,
                 op);
             state->indent++;
             fprintf(out, "%*s", state->indent * 4, "");
-            fprintf(out, "class_%s this = env->env[0];\n", builtin.name);
+            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
             fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "class_%s other = args[0];\n", builtin.name);
             fprintf(out, "%*s", state->indent * 4, "");
@@ -449,11 +450,11 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
 
             fprintf(out, "void *\n");
             fprintf(out,
-                "class_%s_cast_class_string(closure *env, void **args) {\n",
+                "class_%s_cast_class_string(closure env, void **args) {\n",
                 builtin.name);
             state->indent++;
             fprintf(out, "%*s", state->indent * 4, "");
-            fprintf(out, "class_%s this = env->env[0];\n", builtin.name);
+            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
             fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "return builtin_string(this->val);\n");
             state->indent--;
@@ -466,13 +467,13 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                     strident(operators[j].assign_op, assign_op);
                     fprintf(out, "void *\n");
                     fprintf(out,
-                        "class_%s_field_%s(closure *env, void **args) {\n",
+                        "class_%s_field_%s(closure env, void **args) {\n",
                         builtin.name,
                         assign_op);
                     state->indent++;
                     fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out,
-                        "class_%s this = env->env[0];\n",
+                        "class_%s this = env.env[0];\n",
                         builtin.name);
                     fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out, "class_%s other = args[0];\n", builtin.name);
@@ -490,13 +491,13 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                     strident(operators[j].op, op);
                     fprintf(out, "void *\n");
                     fprintf(out,
-                        "class_%s_field_%s(closure *env, void **args) {\n",
+                        "class_%s_field_%s(closure env, void **args) {\n",
                         builtin.name,
                         op);
                     state->indent++;
                     fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out,
-                        "class_%s this = env->env[0];\n",
+                        "class_%s this = env.env[0];\n",
                         builtin.name);
                     fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out, "class_%s other = args[0];\n", builtin.name);
@@ -518,14 +519,14 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                         fprintf(out, "void *\n");
                         fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s_cast_class_%s(closure *env, void **args) "
+                            "class_%s_cast_class_%s(closure env, void **args) "
                             "{\n",
                             builtin.name,
                             cast.name);
                         state->indent++;
                         fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s this = env->env[0];\n",
+                            "class_%s this = env.env[0];\n",
                             builtin.name);
                         fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
@@ -557,14 +558,14 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                         fprintf(out, "void *\n");
                         fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s_cast_class_%s(closure *env, void "
+                            "class_%s_cast_class_%s(closure env, void "
                             "**args) {\n",
                             builtin.name,
                             cast.name);
                         state->indent++;
                         fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s this = env->env[0];\n",
+                            "class_%s this = env.env[0];\n",
                             builtin.name);
                         fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
@@ -629,7 +630,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
         fprintf(out, "\n");
 
         fprintf(out, "void *\n");
-        fprintf(out, "new_%s(closure *env, void **args) {\n", builtin.name);
+        fprintf(out, "new_%s(closure env, void **args) {\n", builtin.name);
         state->indent++;
         fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "return builtin_%s(0);\n", builtin.name);
@@ -643,7 +644,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
         const struct FuncType *func = Vector_get(ast->functions, i);
         char *name;
         Map_get(state->funcIDs, &func, sizeof(func), &name);
-        fprintf(out, "void *\n%s(closure *env, void **args) {\n", name);
+        fprintf(out, "void *\n%s(closure env, void **args) {\n", name);
         state->indent++;
         codeGenFuncBody(func->ast, out, &newState);
         state->indent--;
