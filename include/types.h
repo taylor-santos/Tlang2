@@ -47,6 +47,7 @@ struct Type {
 
 struct FuncType {
     Type super;
+    AST *ast;
     struct Vector *generics; // Vector<char*>
     struct Vector *args;     // Vector<Type*>
     Type *ret_type;
@@ -126,6 +127,7 @@ typedef struct CodeGenState {
     int indent;
     unsigned int tempCount;
     unsigned int funcCount;
+    struct Map *funcIDs;      // Map<const struct FuncType*, char*>
 } CodeGenState;
 
 void

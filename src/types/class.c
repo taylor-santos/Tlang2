@@ -135,8 +135,7 @@ toString(const void *type) {
 }
 
 static char *
-codeGen(const void *this, const char *name) {
-    const struct ClassType *type = this;
+codeGen(UNUSED const void *this, const char *name) {
     if (NULL == name) {
         return safe_strdup("closure");
     }

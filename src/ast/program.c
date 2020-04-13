@@ -172,7 +172,7 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
                     argType->verify(argType, &state, NULL);
                     Vector *args = init_Vector(argType);
                     Type *fieldType = FuncType(loc, Vector(), args, retType);
-                    Vector_append(state.functions, fieldType);
+                    //Vector_append(state.functions, fieldType);
                     Map_put(class->fieldTypes,
                         operators[j].op,
                         strlen(operators[j].op),
@@ -188,7 +188,7 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
                     argType->verify(argType, &state, NULL);
                     Vector *args = init_Vector(argType);
                     Type *fieldType = FuncType(loc, Vector(), args, retType);
-                    Vector_append(state.functions, fieldType);
+                    //Vector_append(state.functions, fieldType);
                     Map_put(class->fieldTypes,
                         operators[j].assign_op,
                         strlen(operators[j].assign_op),
@@ -206,7 +206,7 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
             argType->verify(argType, &state, NULL);
             Vector *args = init_Vector(argType);
             Type *fieldType = FuncType(loc, Vector(), args, retType);
-            Vector_append(state.functions, fieldType);
+            //Vector_append(state.functions, fieldType);
             char *fieldName = "==";
             Map_put(class->fieldTypes,
                 fieldName,
@@ -281,32 +281,61 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     CodeGenState newState = (CodeGenState){
         0,
         0,
-        0
+        0,
+        Map()
     };
+    state = &newState;
 
     fprintf(out, "#include <stdio.h>\n");
     fprintf(out, "#include <stdlib.h>\n");
     fprintf(out, "#include <string.h>\n");
     fprintf(out, "\n");
     fprintf(out, "#define ERROR(msg) { \\\n");
-    newState.indent++;
-    fprintf(out, "%*s", newState.indent * 4, "");
+    state->indent++;
+    fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out, "perror(msg); \\\n");
-    fprintf(out, "%*s", newState.indent * 4, "");
+    fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out, "exit(EXIT_FAILURE); \\\n");
-    newState.indent--;
+    state->indent--;
     fprintf(out, "}\n");
-    fprintf(out, "#define CALL(closure, args) closure.fn(closure, args)\n");
+
+    fprintf(out, "#define CALL(closure, args) closure.fn(&closure, args)\n");
     fprintf(out, "\n");
+
+    fprintf(out, "struct closure;\n");
+    fprintf(out, "\n");
+
+    fprintf(out, "typedef void *(FUNC)(struct closure *env, void **args);\n");
+    fprintf(out, "\n");
+
     fprintf(out, "typedef struct closure {\n");
-    newState.indent++;
-    fprintf(out, "%*s", newState.indent * 4, "");
-    fprintf(out, "void *(*fn)(struct closure, void**);\n");
-    fprintf(out, "%*s", newState.indent * 4, "");
+    state->indent++;
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "FUNC *fn;\n");
+    fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out, "void **env;\n");
-    newState.indent--;
+    state->indent--;
     fprintf(out, "} closure;\n");
     fprintf(out, "\n");
+
+    n = Vector_size(ast->functions);
+    if (n > 0) {
+        fprintf(out, "FUNC ");
+    }
+    char *sep = "";
+    for (size_t i = 0; i < n; i++) {
+        const struct FuncType *func = Vector_get(ast->functions, i);
+        char *name = safe_asprintf("func%d", state->funcCount);
+        state->funcCount++;
+        Map_put(state->funcIDs, &func, sizeof(func), name, NULL);
+        fprintf(out, "%s%s", sep, name);
+        sep = ", ";
+    }
+    if (n > 0) {
+        fprintf(out, ";\n");
+        fprintf(out, "\n");
+    }
+
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
         struct Builtin builtin = builtins[i];
         fprintf(out, "struct class_%s *\n", builtin.name);
@@ -316,37 +345,37 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
         struct Builtin builtin = builtins[i];
         fprintf(out, "typedef struct class_%s {\n", builtin.name);
-        newState.indent++;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        state->indent++;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "%s val;\n", builtin.ctype);
         size_t opCount = sizeof(operators) / sizeof(*operators);
         for (size_t j = 0; j < opCount; j++) {
             if (builtin.operators & operators[j].type) {
                 char op[strlen(operators[j].op) * 2 + 1];
                 strident(operators[j].op, op);
-                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
-                    "void *(*field_%s)(closure env, void **args);\n",
+                    "void *(*field_%s)(closure *env, void **args);\n",
                     op);
 
                 char assign_op[strlen(operators[j].assign_op) * 2 + 1];
                 strident(operators[j].assign_op, assign_op);
-                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
-                    "void *(*field_%s)(closure env, void **args);\n",
+                    "void *(*field_%s)(closure *env, void **args);\n",
                     assign_op);
             }
         }
         for (size_t j = 0; j < sizeof(builtins) / sizeof(*builtins); j++) {
             struct Builtin cast = builtins[j];
             if (builtin.casts & cast.type) {
-                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
-                    "void *(*cast_class_%s)(closure env, void **args);\n",
+                    "void *(*cast_class_%s)(closure *env, void **args);\n",
                     cast.name);
             }
         }
-        newState.indent--;
+        state->indent--;
         fprintf(out, "} *class_%s;\n", builtin.name);
         fprintf(out, "\n");
         if (builtin.type == BUILTIN_STRING) {
@@ -354,31 +383,31 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             strident("+=", assign_op);
             fprintf(out, "void *\n");
             fprintf(out,
-                "class_%s_field_%s(closure env, void **args) {\n",
+                "class_%s_field_%s(closure *env, void **args) {\n",
                 builtin.name,
                 assign_op);
-            newState.indent++;
-            fprintf(out, "%*s", newState.indent * 4, "");
-            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent++;
+            fprintf(out, "%*s", state->indent * 4, "");
+            fprintf(out, "class_%s this = env->env[0];\n", builtin.name);
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "class_%s other = args[0];\n", builtin.name);
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "size_t size = strlen(this->val);\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out,
                 "if (NULL == (this->val = realloc(this->val, size + strlen"
                 "(other->val) + 1))) {\n");
-            newState.indent++;
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent++;
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "ERROR(\"realloc\");\n");
-            newState.indent--;
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent--;
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "}\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "strcpy(this->val + size, other->val);\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "return this;\n");
-            newState.indent--;
+            state->indent--;
             fprintf(out, "}\n");
             fprintf(out, "\n");
 
@@ -386,48 +415,48 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             strident("+", op);
             fprintf(out, "void *\n");
             fprintf(out,
-                "class_%s_field_%s(closure env, void **args) {\n",
+                "class_%s_field_%s(closure *env, void **args) {\n",
                 builtin.name,
                 op);
-            newState.indent++;
-            fprintf(out, "%*s", newState.indent * 4, "");
-            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent++;
+            fprintf(out, "%*s", state->indent * 4, "");
+            fprintf(out, "class_%s this = env->env[0];\n", builtin.name);
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "class_%s other = args[0];\n", builtin.name);
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "size_t size1 = strlen(this->val),\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "       size2 = strlen(other->val);\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "char *val;\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "if (NULL == (val = malloc(size1 + size2 + 1))) {\n");
-            newState.indent++;
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent++;
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "ERROR(\"malloc\");\n");
-            newState.indent--;
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent--;
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "}\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "strcpy(val, this->val);\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "strcpy(val + size1, other->val);\n");
-            fprintf(out, "%*s", newState.indent * 4, "");
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "return builtin_string(val);\n");
-            newState.indent--;
+            state->indent--;
             fprintf(out, "}\n");
             fprintf(out, "\n");
 
             fprintf(out, "void *\n");
             fprintf(out,
-                "class_%s_cast_class_string(closure env, void **args) {\n",
+                "class_%s_cast_class_string(closure *env, void **args) {\n",
                 builtin.name);
-            newState.indent++;
-            fprintf(out, "%*s", newState.indent * 4, "");
-            fprintf(out, "class_%s this = env.env[0];\n", builtin.name);
-            fprintf(out, "%*s", newState.indent * 4, "");
+            state->indent++;
+            fprintf(out, "%*s", state->indent * 4, "");
+            fprintf(out, "class_%s this = env->env[0];\n", builtin.name);
+            fprintf(out, "%*s", state->indent * 4, "");
             fprintf(out, "return builtin_string(this->val);\n");
-            newState.indent--;
+            state->indent--;
             fprintf(out, "}\n");
             fprintf(out, "\n");
         } else {
@@ -437,23 +466,23 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                     strident(operators[j].assign_op, assign_op);
                     fprintf(out, "void *\n");
                     fprintf(out,
-                        "class_%s_field_%s(closure env, void **args) {\n",
+                        "class_%s_field_%s(closure *env, void **args) {\n",
                         builtin.name,
                         assign_op);
-                    newState.indent++;
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    state->indent++;
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out,
-                        "class_%s this = env.env[0];\n",
+                        "class_%s this = env->env[0];\n",
                         builtin.name);
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out, "class_%s other = args[0];\n", builtin.name);
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out,
                         "this->val %s other->val;\n",
                         operators[j].assign_op);
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out, "return this;\n");
-                    newState.indent--;
+                    state->indent--;
                     fprintf(out, "}\n");
                     fprintf(out, "\n");
 
@@ -461,22 +490,22 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                     strident(operators[j].op, op);
                     fprintf(out, "void *\n");
                     fprintf(out,
-                        "class_%s_field_%s(closure env, void **args) {\n",
+                        "class_%s_field_%s(closure *env, void **args) {\n",
                         builtin.name,
                         op);
-                    newState.indent++;
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    state->indent++;
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out,
-                        "class_%s this = env.env[0];\n",
+                        "class_%s this = env->env[0];\n",
                         builtin.name);
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out, "class_%s other = args[0];\n", builtin.name);
-                    fprintf(out, "%*s", newState.indent * 4, "");
+                    fprintf(out, "%*s", state->indent * 4, "");
                     fprintf(out,
                         "return builtin_%s(this->val %s other->val);\n",
                         builtin.name,
                         operators[j].op);
-                    newState.indent--;
+                    state->indent--;
                     fprintf(out, "}\n");
                     fprintf(out, "\n");
                 }
@@ -485,64 +514,64 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
                 struct Builtin cast = builtins[j];
                 if (builtin.casts & cast.type) {
                     if (cast.type == BUILTIN_STRING) {
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out, "void *\n");
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s_cast_class_%s(closure env, void **args) "
+                            "class_%s_cast_class_%s(closure *env, void **args) "
                             "{\n",
                             builtin.name,
                             cast.name);
-                        newState.indent++;
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        state->indent++;
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s this = env.env[0];\n",
+                            "class_%s this = env->env[0];\n",
                             builtin.name);
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
                             "size_t size = snprintf(NULL, 0, \"%s\", this->val);"
                             "\n",
                             builtin.fmt);
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out, "char *val;\n");
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
                             "if (NULL == (val = malloc(size + 1))) {\n");
-                        newState.indent++;
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        state->indent++;
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out, "ERROR(\"malloc\");\n");
-                        newState.indent--;
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        state->indent--;
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out, "}\n");
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
                             "sprintf(val, \"%s\", this->val);\n",
                             builtin.fmt);
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out, "return builtin_string(val);\n");
-                        newState.indent--;
+                        state->indent--;
                         fprintf(out, "}\n");
                         fprintf(out, "\n");
                     } else {
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out, "void *\n");
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s_cast_class_%s(closure env, void "
+                            "class_%s_cast_class_%s(closure *env, void "
                             "**args) {\n",
                             builtin.name,
                             cast.name);
-                        newState.indent++;
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        state->indent++;
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
-                            "class_%s this = env.env[0];\n",
+                            "class_%s this = env->env[0];\n",
                             builtin.name);
-                        fprintf(out, "%*s", newState.indent * 4, "");
+                        fprintf(out, "%*s", state->indent * 4, "");
                         fprintf(out,
                             "return builtin_%s((%s)this->val);\n",
                             cast.name,
                             cast.ctype);
-                        newState.indent--;
+                        state->indent--;
                         fprintf(out, "}\n");
                         fprintf(out, "\n");
                     }
@@ -551,66 +580,79 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
         }
         fprintf(out, "class_%s\n", builtin.name);
         fprintf(out, "builtin_%s(%s val) {\n", builtin.name, builtin.ctype);
-        newState.indent++;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        state->indent++;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "class_%s ret;\n", builtin.name);
-        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "if (NULL == (ret = malloc(sizeof(*ret)))) {\n");
-        newState.indent++;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        state->indent++;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "ERROR(\"malloc\");\n");
-        newState.indent--;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        state->indent--;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "}\n");
-        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "*ret = (struct class_%s) {\n", builtin.name);
-        newState.indent++;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        state->indent++;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "val,\n");
         for (size_t j = 0; j < opCount; j++) {
             if (builtin.operators & operators[j].type) {
                 char op[strlen(operators[j].op) * 2 + 1];
                 strident(operators[j].op, op);
-                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out, "class_%s_field_%s,\n", builtin.name, op);
 
                 char assign_op[strlen(operators[j].assign_op) * 2 + 1];
                 strident(operators[j].assign_op, assign_op);
-                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out, "class_%s_field_%s,\n", builtin.name, assign_op);
             }
         }
         for (size_t j = 0; j < sizeof(builtins) / sizeof(*builtins); j++) {
             struct Builtin cast = builtins[j];
             if (builtin.casts & cast.type) {
-                fprintf(out, "%*s", newState.indent * 4, "");
+                fprintf(out, "%*s", state->indent * 4, "");
                 fprintf(out,
                     "class_%s_cast_class_%s,\n",
                     builtin.name,
                     cast.name);
             }
         }
-        newState.indent--;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        state->indent--;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "};\n");
-        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "return ret;\n");
-        newState.indent--;
+        state->indent--;
         fprintf(out, "}\n");
         fprintf(out, "\n");
 
         fprintf(out, "void *\n");
-        fprintf(out, "new_%s(closure env, void **args) {\n", builtin.name);
-        newState.indent++;
-        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "new_%s(closure *env, void **args) {\n", builtin.name);
+        state->indent++;
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "return builtin_%s(0);\n", builtin.name);
-        newState.indent--;
+        state->indent--;
+        fprintf(out, "}\n");
+        fprintf(out, "\n");
+    }
+
+    n = Vector_size(ast->functions);
+    for (size_t i = 0; i < n; i++) {
+        const struct FuncType *func = Vector_get(ast->functions, i);
+        char *name;
+        Map_get(state->funcIDs, &func, sizeof(func), &name);
+        fprintf(out, "void *\n%s(closure *env, void **args) {\n", name);
+        state->indent++;
+        codeGenFuncBody(func->ast, out, &newState);
+        state->indent--;
         fprintf(out, "}\n");
         fprintf(out, "\n");
     }
 
     fprintf(out, "int\nmain(int argc, char *argv[]) {\n");
-    newState.indent++;
+    state->indent++;
     Iterator *it = Map_iterator(ast->symbols);
     while (it->hasNext(it)) {
         MapIterData data = it->next(it);
@@ -619,7 +661,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
             *name = safe_asprintf("var_%.*s", (int)data.len, (char *)data.key);
         char *typeName = type->codeGen(type, name);
         free(name);
-        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out, "%s;\n", typeName);
         free(typeName);
     }
@@ -627,7 +669,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     fprintf(out, "\n");
     for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++) {
         struct Builtin builtin = builtins[i];
-        fprintf(out, "%*s", newState.indent * 4, "");
+        fprintf(out, "%*s", state->indent * 4, "");
         fprintf(out,
             "var_%s = (closure){ new_%s, NULL };\n",
             builtin.name,
@@ -639,7 +681,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
         char *code = stmt->codeGen(stmt, out, &newState);
         free(code);
     }
-    newState.indent--;
+    state->indent--;
     fprintf(out, "}\n");
     return NULL;
 }
@@ -663,7 +705,7 @@ delete(void *this) {
 AST *
 new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     ASTProgram *program = NULL;
-    Map *symbols, *compare;
+    Map *symbols, *compare, *funcIDs;
     Vector *classes, *functions;
 
     program = safe_malloc(sizeof(*program));
@@ -671,6 +713,7 @@ new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     classes = Vector();
     functions = Vector();
     compare = Map();
+    funcIDs = Map();
     *program = (ASTProgram){
         {
             json,
@@ -684,7 +727,8 @@ new_ASTProgram(YYLTYPE loc, Vector *stmts) {
         symbols,
         classes,
         functions,
-        compare
+        compare,
+        funcIDs
     };
     return (AST *)program;
 }

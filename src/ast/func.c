@@ -123,13 +123,58 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     Type *ret_type = copy_type(ast->ret_type);
     *typeptr = ast->super.type =
         FuncType(ast->super.loc, Vector(), args, ret_type);
+    struct FuncType *func = (struct FuncType *)*typeptr;
+    func->ast = this;
     Vector_append(state->functions, ast->super.type);
     return 0;
 }
 
+void
+codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state) {
+    ASTFunc *ast = this;
+    Iterator *it = Map_iterator(ast->symbols);
+    while (it->hasNext(it)) {
+        MapIterData data = it->next(it);
+        Type *type = data.value;
+        char
+            *name = safe_asprintf("var_%.*s", (int)data.len, (char *)data.key);
+        char *typeName = type->codeGen(type, name);
+        free(name);
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out, "%s;\n", typeName);
+        free(typeName);
+    }
+    it->delete(it);
+    fprintf(out, "\n");
+
+    size_t nargs = Vector_size(ast->args);
+    int argi = 0;
+    for (size_t i = 0; i < nargs; i++) {
+        struct Field *arg = Vector_get(ast->args, i);
+        size_t nnames = Vector_size(arg->names);
+        for (size_t j = 0; j < nnames; j++) {
+            char *name = Vector_get(arg->names, j);
+            fprintf(out, "%*s", state->indent * 4, "");
+            fprintf(out, "var_%s = args[%d];\n", name, argi++);
+        }
+    }
+    fprintf(out, "\n");
+
+    size_t nstmts = Vector_size(ast->stmts);
+    for (size_t i = 0; i < nstmts; i++) {
+        AST *stmt = Vector_get(ast->stmts, i);
+        char *code = stmt->codeGen(stmt, out, state);
+        free(code);
+    }
+}
+
 static char *
-codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
-    return safe_strdup("/* FUNC NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, CodeGenState *state) {
+    ASTFunc *ast = this;
+    struct FuncType *func = (struct FuncType *)ast->super.type;
+    char *name;
+    Map_get(state->funcIDs, &func, sizeof(func), &name);
+    return safe_asprintf("(closure){ %s, NULL }", name);
 }
 
 static void

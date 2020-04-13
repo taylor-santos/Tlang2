@@ -158,6 +158,11 @@ toString(const void *type) {
 
 static char *
 codeGen(const void *this, const char *name) {
+    if (NULL == name) {
+        return safe_strdup("closure");
+    } else {
+        return safe_asprintf("closure %s", name);
+    }
     const struct FuncType *type = this;
     char *retType = type->ret_type->codeGen(type->ret_type, NULL);
     const char *ident = name == NULL
@@ -223,7 +228,12 @@ copy(const void *type) {
             this->super.init,
             1,
             this->super.loc
-        }, this->generics, this->args, this->ret_type, next_copy
+        },
+        this->ast,
+        this->generics,
+        this->args,
+        this->ret_type,
+        next_copy
     };
     return (Type *)type_copy;
 }
@@ -247,7 +257,12 @@ new_FuncType(YYLTYPE loc, Vector *generics, Vector *args, Type *ret_type) {
             0,
             0,
             loc
-        }, generics, args, ret_type, NULL
+        },
+        NULL,
+        generics,
+        args,
+        ret_type,
+        NULL
     };
     return (Type *)type;
 }

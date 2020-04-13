@@ -85,6 +85,9 @@ delete_case(struct Case *c);
 void
 delete_AST(AST *this);
 
+void
+codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state);
+
 #define TypeCheck(root) root->getType(root, NULL, NULL)
 
 #define CodeGen(root, out) root->codeGen(root, out, NULL)

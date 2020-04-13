@@ -70,8 +70,19 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 }
 
 static char *
-codeGen(UNUSED void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
-    return safe_strdup("/* RETURN NOT IMPLEMENTED */");
+codeGen(void *this, FILE *out, CodeGenState *state) {
+    ASTReturn *ast = this;
+    if (NULL == ast->expr) {
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out, "return NULL;\n");
+    } else {
+        char *code = ast->expr->codeGen(ast->expr, out, state);
+
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out, "return %s;\n", code);
+        free(code);
+    }
+    return NULL;
 }
 
 static void

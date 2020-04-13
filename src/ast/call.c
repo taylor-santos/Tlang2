@@ -122,20 +122,32 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
     char *args[n];
     for (size_t i = 0; i < n; i++) {
         AST *arg = Vector_get(ast->args, i);
-        args[i] = arg->codeGen(arg, out, state);
+        char *argCode = arg->codeGen(arg, out, state);
+        args[i] = safe_asprintf("temp%d", state->tempCount);
+        char *argName = arg->type->codeGen(arg->type, args[i]);
+        state->tempCount++;
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out, "%s = %s;\n", argName, argCode);
+        free(argName);
+        free(argCode);
     }
-    char *tmpName = safe_asprintf("temp%d", state->tempCount);
+    char *argsName = safe_asprintf("temp%d", state->tempCount);
     state->tempCount++;
-    char *typeName = ast->super.type->codeGen(ast->super.type, tmpName);
     fprintf(out, "%*s", state->indent * 4, "");
-    fprintf(out, "%s = CALL(%s, (void*[]){", typeName, code);
+    fprintf(out, "void* %s[] = {", argsName);
     char *sep = "";
     for (size_t i = 0; i < n; i++) {
         fprintf(out, "%s%s", sep, args[i]);
         sep = ", ";
         free(args[i]);
     }
-    fprintf(out, "});\n");
+    fprintf(out, "};\n");
+    char *tmpName = safe_asprintf("temp%d", state->tempCount);
+    state->tempCount++;
+    char *typeName = ast->super.type->codeGen(ast->super.type, tmpName);
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "%s = CALL(%s, %s);\n", typeName, code, argsName);
+
     free(typeName);
     free(code);
     return tmpName;
