@@ -35,7 +35,11 @@ new_Entry(const void *key, size_t len, void *value, unsigned int h) {
     new_key = safe_malloc(len);
     memcpy(new_key, key, len);
     *new_entry = (struct Entry){
-        NULL, new_key, len, value, h
+        NULL,
+        new_key,
+        len,
+        value,
+        h
     };
     return new_entry;
 }
@@ -155,6 +159,44 @@ Map_get(Map *map, const void *key, size_t key_len, void *value) {
     return 1;
 }
 
+int
+Map_remove(Map *map, const void *key, size_t key_len, void *prev) {
+    unsigned long h;
+    struct Entry **curr_entry, *old_entry;
+
+    h = hash(key, key_len);
+    for (curr_entry = &map->entries[h % map->capacity];
+        NULL != *curr_entry;
+        curr_entry = &(*curr_entry)->next) {
+        int cmp = keycmp(key, key_len, (*curr_entry)->key, (*curr_entry)->len);
+        if (0 == cmp) {
+            if (NULL != prev) {
+                *(void **)prev = (*curr_entry)->value;
+            }
+            old_entry = *curr_entry;
+            *curr_entry = (*curr_entry)->next;
+            free(old_entry->key);
+            free(old_entry);
+            map->size--;
+            return 0;
+        } else if (0 > cmp) {
+            return 1;
+        }
+    }
+    if (NULL == *curr_entry) {
+        return 1;
+    }
+    if (NULL != prev) {
+        *(void **)prev = (*curr_entry)->value;
+    }
+    old_entry = *curr_entry;
+    *curr_entry = NULL;
+    free(old_entry->key);
+    free(old_entry);
+    map->size--;
+    return 0;
+}
+
 void
 delete_Map(Map *this, MAP_DELETE_FUNC delete_value) {
     for (size_t i = 0; i < this->capacity; i++) {
@@ -217,7 +259,10 @@ copy_Map(const Map *map, MAP_COPY_FUNC copy_value) {
         }
     }
     *new_map = (Map){
-        map->size, map->capacity, map->load_factor, entries
+        map->size,
+        map->capacity,
+        map->load_factor,
+        entries
     };
     return new_map;
 }
@@ -234,7 +279,10 @@ new_Map(unsigned int capacity, double load_factor) {
     map = safe_malloc(sizeof(*map));
     entries = safe_calloc(capacity, sizeof(*entries));
     *map = (Map){
-        0, capacity, load_factor, entries
+        0,
+        capacity,
+        load_factor,
+        entries
     };
     return map;
 }
@@ -265,7 +313,9 @@ iterator_next(Iterator *it) {
         }
     }
     return (MapIterData){
-        ret->key, ret->len, ret->value
+        ret->key,
+        ret->len,
+        ret->value
     };
 }
 
@@ -289,11 +339,16 @@ Map_iterator(Map *map) {
 
     data = safe_malloc(sizeof(*data));
     *data = (struct IteratorData){
-        map, currEntry, index
+        map,
+        currEntry,
+        index
     };
     Iterator *it = safe_malloc(sizeof(*it));
     *it = (Iterator){
-        data, iterator_hasNext, iterator_next, iterator_delete
+        data,
+        iterator_hasNext,
+        iterator_next,
+        iterator_delete
     };
     return it;
 }

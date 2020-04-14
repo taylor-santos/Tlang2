@@ -98,6 +98,11 @@ json_comma(FILE *out, int indent) {
 }
 
 void
+json_empty(UNUSED const void *value, FILE *out, UNUSED int indent) {
+    json_string("", out, indent);
+}
+
+void
 json_vector(const Vector *list,
     void (*map)(const void *, FILE *, int),
     FILE *out,

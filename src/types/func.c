@@ -3,6 +3,7 @@
 #include "safe.h"
 #include "vector.h"
 #include "dynamic_string.h"
+#include "map.h"
 
 static void
 json_overload(const void *overload, FILE *out, int indent) {
@@ -157,31 +158,12 @@ toString(const void *type) {
 }
 
 static char *
-codeGen(const void *this, const char *name) {
+codeGen(UNUSED const void *this, const char *name) {
     if (NULL == name) {
         return safe_strdup("closure");
     } else {
         return safe_asprintf("closure %s", name);
     }
-    const struct FuncType *type = this;
-    char *retType = type->ret_type->codeGen(type->ret_type, NULL);
-    const char *ident = name == NULL
-        ? ""
-        : name;
-    dstring ret = dstring(retType);
-    free(retType);
-    vappend_str(&ret, " (*%s)(", ident);
-    size_t n = Vector_size(type->args);
-    char *sep = "";
-    for (size_t i = 0; i < n; i++) {
-        Type *arg = Vector_get(type->args, i);
-        char *argName = arg->codeGen(arg, NULL);
-        vappend_str(&ret, "%s%s", sep, argName);
-        free(argName);
-        sep = ", ";
-    }
-    append_str(&ret, ")");
-    return ret.str;
 }
 
 static void
@@ -194,6 +176,9 @@ delete(void *type) {
         delete_Vector(this->generics, free);
         delete_Vector(this->args, (VEC_DELETE_FUNC)delete_type);
         delete_type(this->ret_type);
+        if (NULL != this->env) {
+            delete_Map(this->env, NULL);
+        }
     }
     if (NULL != this->next) {
         delete(this->next);
@@ -232,6 +217,7 @@ copy(const void *type) {
         this->ast,
         this->generics,
         this->args,
+        this->env,
         this->ret_type,
         next_copy
     };
@@ -261,6 +247,7 @@ new_FuncType(YYLTYPE loc, Vector *generics, Vector *args, Type *ret_type) {
         NULL,
         generics,
         args,
+        NULL,
         ret_type,
         NULL
     };

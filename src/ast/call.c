@@ -142,14 +142,21 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
         free(args[i]);
     }
     fprintf(out, "};\n");
-    char *tmpName = safe_asprintf("temp%d", state->tempCount);
-    state->tempCount++;
-    char *typeName = ast->super.type->codeGen(ast->super.type, tmpName);
-    fprintf(out, "%*s", state->indent * 4, "");
-    fprintf(out, "%s = CALL(%s, %s);\n", typeName, code, argsName);
-
-    free(typeName);
+    struct FuncType *func = (struct FuncType *)ast->expr->type;
+    char *tmpName = NULL;
+    if (TYPE_NONE != func->ret_type->type) {
+        tmpName = safe_asprintf("temp%d", state->tempCount);
+        state->tempCount++;
+        char *typeName = ast->super.type->codeGen(ast->super.type, tmpName);
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out, "%s = ", typeName);
+        free(typeName);
+    } else {
+        fprintf(out, "%*s", state->indent * 4, "");
+    }
+    fprintf(out, "CALL(%s, %s);\n", code, argsName);
     free(code);
+    free(argsName);
     return tmpName;
 }
 

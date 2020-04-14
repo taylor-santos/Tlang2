@@ -68,6 +68,9 @@ handle_spread(const struct SpreadType *spread,
             char *name = Vector_get(ast->vars, var_index);
             if (NULL != name) {
                 size_t len = strlen(name);
+                if (NULL != state->usedSymbols) {
+                    Map_put(state->usedSymbols, name, len, NULL, NULL);
+                }
                 type->init = 1;
                 char *msg;
                 Type *type_copy = copy_type(type);
@@ -75,6 +78,7 @@ handle_spread(const struct SpreadType *spread,
                     name,
                     len,
                     type_copy,
+                    1,
                     state,
                     &msg)) {
                     print_code_error(stderr, ast->super.loc, "%s", msg);
@@ -118,10 +122,18 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         if (name != NULL) {
             //Not an ignored variable (_)
             size_t len = strlen(name);
+            if (NULL != state->usedSymbols) {
+                Map_put(state->usedSymbols, name, len, NULL, NULL);
+            }
             expr_type->init = 1;
             char *msg;
-            Type *type_copy = copy_type(expr_type);
-            if (AddSymbol(state->symbols, name, len, type_copy, state, &msg)) {
+            if (AddSymbol(state->symbols,
+                name,
+                len,
+                expr_type,
+                1,
+                state,
+                &msg)) {
                 print_code_error(stderr, ast->super.loc, "%s", msg);
                 free(msg);
                 status = 1;

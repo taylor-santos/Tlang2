@@ -16,6 +16,7 @@ struct ASTFunc {
     Type *ret_type;
     Vector *stmts;    // Vector<AST*>
     Map *symbols;     // NULL until type checker is executed.
+    Map *locals;      // Map<char*, NULL>
 };
 
 static void
@@ -55,7 +56,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 1;
     }
     Vector *args = Vector();
+    Vector *argNames = Vector();
     ast->symbols = copy_Map(state->symbols, (MAP_COPY_FUNC)copy_type);
+    ast->locals = Map();
     size_t nargs = Vector_size(ast->args);
     for (size_t i = 0; i < nargs; i++) {
         struct Field *arg = Vector_get(ast->args, i);
@@ -69,6 +72,7 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             size_t nnames = Vector_size(arg->names);
             for (size_t j = 0; j < nnames; j++) {
                 char *name = Vector_get(arg->names, j);
+                Vector_append(argNames, name);
                 size_t len = strlen(name);
                 type_copy = copy_type(arg->type);
                 type_copy->init = 1;
@@ -92,9 +96,13 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     Type *prevFuncType = state->funcType;
     Type *prevRetType = state->retType;
     Map *prevSymbols = state->symbols;
+    Map *prevNewSymbols = state->newSymbols;
+    Map *prevUsedSymbols = state->usedSymbols;
     state->retType = NULL;
     state->funcType = ast->ret_type;
     state->symbols = ast->symbols;
+    state->newSymbols = ast->locals;
+    Map *used = state->usedSymbols = Map();
     size_t nstmts = Vector_size(ast->stmts);
     for (size_t i = 0; i < nstmts; i++) {
         AST *stmt = Vector_get(ast->stmts, i);
@@ -116,15 +124,40 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
     state->funcType = prevFuncType;
     state->retType = prevRetType;
     state->symbols = prevSymbols;
+    state->newSymbols = prevNewSymbols;
+    state->usedSymbols = prevUsedSymbols;
     if (status) {
         delete_Vector(args, (VEC_DELETE_FUNC)delete_type);
         return 1;
+    }
+    Iterator *it = Map_iterator(ast->locals);
+    // Remove local variables and arguments from used variables, to produce a
+    // list of used environment variables.
+    while (it->hasNext(it)) {
+        MapIterData data = it->next(it);
+        Map_remove(used, data.key, data.len, NULL);
+    }
+    it->delete(it);
+    nargs = Vector_size(argNames);
+    for (size_t i = 0; i < nargs; i++) {
+        char *arg = Vector_get(argNames, i);
+        Map_remove(used, arg, strlen(arg), NULL);
+    }
+    delete_Vector(argNames, NULL);
+    if (NULL != state->usedSymbols) {
+        it = Map_iterator(used);
+        while (it->hasNext(it)) {
+            MapIterData data = it->next(it);
+            Map_put(state->usedSymbols, data.key, data.len, NULL, NULL);
+        }
+        it->delete(it);
     }
     Type *ret_type = copy_type(ast->ret_type);
     *typeptr = ast->super.type =
         FuncType(ast->super.loc, Vector(), args, ret_type);
     struct FuncType *func = (struct FuncType *)*typeptr;
     func->ast = this;
+    func->env = used;
     Vector_append(state->functions, ast->super.type);
     return 0;
 }
@@ -132,12 +165,14 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 void
 codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state) {
     ASTFunc *ast = this;
-    Iterator *it = Map_iterator(ast->symbols);
+    Iterator *it = Map_iterator(ast->locals);
     while (it->hasNext(it)) {
         MapIterData data = it->next(it);
-        Type *type = data.value;
-        char
-            *name = safe_asprintf("var_%.*s", (int)data.len, (char *)data.key);
+        char *symbol = data.key;
+        size_t len = data.len;
+        Type *type;
+        Map_get(ast->symbols, symbol, len, &type);
+        char *name = safe_asprintf("var_%.*s", (int)len, symbol);
         char *typeName = type->codeGen(type, name);
         free(name);
         fprintf(out, "%*s", state->indent * 4, "");
@@ -145,7 +180,28 @@ codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state) {
         free(typeName);
     }
     it->delete(it);
-    fprintf(out, "\n");
+
+    struct FuncType *func = (struct FuncType *)ast->super.type;
+    it = Map_iterator(func->env);
+    int envID = 0;
+    while (it->hasNext(it)) {
+        MapIterData data = it->next(it);
+        char *symbol = data.key;
+        size_t len = data.len;
+        Type *type;
+        Map_get(ast->symbols, symbol, len, &type);
+        char *name = safe_asprintf("var_%.*s", (int)len, symbol);
+        char *typeName = type->codeGen(type, NULL);
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out,
+            "#define %s (*(%s*)env.env[%d])\n",
+            name,
+            typeName,
+            envID++);
+        free(name);
+        free(typeName);
+    }
+    it->delete(it);
 
     size_t nargs = Vector_size(ast->args);
     int argi = 0;
@@ -154,8 +210,12 @@ codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state) {
         size_t nnames = Vector_size(arg->names);
         for (size_t j = 0; j < nnames; j++) {
             char *name = Vector_get(arg->names, j);
+            char *ident = safe_asprintf("var_%s", name);
+            char *typeName = arg->type->codeGen(arg->type, ident);
+            free(ident);
             fprintf(out, "%*s", state->indent * 4, "");
-            fprintf(out, "var_%s = args[%d];\n", name, argi++);
+            fprintf(out, "%s = args[%d];\n", typeName, argi++);
+            free(typeName);
         }
     }
     fprintf(out, "\n");
@@ -166,15 +226,43 @@ codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state) {
         char *code = stmt->codeGen(stmt, out, state);
         free(code);
     }
+    it = Map_iterator(func->env);
+    while (it->hasNext(it)) {
+        MapIterData data = it->next(it);
+        char *symbol = data.key;
+        size_t len = data.len;
+        char *name = safe_asprintf("var_%.*s", (int)len, symbol);
+        fprintf(out, "%*s", state->indent * 4, "");
+        fprintf(out, "#undef %s\n", name);
+        free(name);
+    }
+    it->delete(it);
 }
 
 static char *
-codeGen(void *this, FILE *out, CodeGenState *state) {
+codeGen(void *this, UNUSED FILE *out, CodeGenState *state) {
     ASTFunc *ast = this;
     struct FuncType *func = (struct FuncType *)ast->super.type;
+    char *tmp = safe_asprintf("temp%d", state->tempCount);
+    state->tempCount++;
+    fprintf(out, "%*s", state->indent * 4, "");
+    fprintf(out, "void *%s[] = {", tmp);
+    Iterator *it = Map_iterator(func->env);
+    char *sep = "";
+    while (it->hasNext(it)) {
+        MapIterData data = it->next(it);
+        char *symbol = data.key;
+        size_t len = data.len;
+        fprintf(out, " %s&var_%.*s", sep, (int)len, symbol);
+        sep = ",";
+    }
+    fprintf(out, " };\n");
+    it->delete(it);
     char *name;
     Map_get(state->funcIDs, &func, sizeof(func), &name);
-    return safe_asprintf("(closure){ %s, NULL }", name);
+    char *ret = safe_asprintf("(closure){ %s, %s }", name, tmp);
+    free(tmp);
+    return ret;
 }
 
 static void
@@ -189,6 +277,9 @@ delete(void *this) {
     }
     if (NULL != ast->symbols) {
         delete_Map(ast->symbols, (MAP_DELETE_FUNC)delete_type);
+    }
+    if (NULL != ast->locals) {
+        delete_Map(ast->locals, NULL);
     }
     free(this);
 }
@@ -215,6 +306,7 @@ new_ASTFunc(YYLTYPE loc,
         args,
         ret_type,
         stmts,
+        NULL,
         NULL
     };
     return (AST *)func;

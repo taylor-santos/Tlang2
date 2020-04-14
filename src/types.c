@@ -78,18 +78,28 @@ AddComparison(const struct ClassType *type, TypeCheckState *state) {
 }
 
 int
-AddSymbol(Map *symbols,
+AddSymbol(struct Map *symbols,
     const char *symbol,
     size_t len,
     Type *type,
+    unsigned char makeCopy,
     const TypeCheckState *state,
     char **msg) {
     Type *prev_type = NULL;
     if (Map_get(symbols, symbol, len, &prev_type)) {
+        if (makeCopy) {
+            type = type->copy(type);
+        }
         Map_put(symbols, symbol, len, type, NULL);
+        if (NULL != state->newSymbols) {
+            Map_put(state->newSymbols, symbol, len, NULL, NULL);
+        }
         return 0;
     }
     if (TYPE_FUNC == prev_type->type && TYPE_FUNC == type->type) {
+        if (makeCopy) {
+            type = type->copy(type);
+        }
         struct FuncType *func1 = (struct FuncType *)prev_type,
             *func2 = (struct FuncType *)type;
         while (NULL != func1->next) {

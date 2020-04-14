@@ -249,4 +249,22 @@ a = new A();
 b = 5;
 b += 10;
 */
-x = 1.999 => int;
+/*
+foo = func(x: int, y: double) => int {
+    a = y*y + x=>double;
+    bar = func(z: int) => int {
+        return z;
+    };
+    return bar(a => int + x);
+};
+x = 6.4 => int;
+y = foo(x, 3.2);
+*/
+a = 10;
+foo = func(x: int) => none {
+    bar = func() => none {
+        a = x;
+    };
+    bar();
+};
+foo(5);

@@ -46,7 +46,7 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         char *name = Vector_get(ast->vars, i);
         size_t len = strlen(name);
         Type *type_copy = copy_type(ast->super.type);
-        if (AddSymbol(state->symbols, name, len, type_copy, state, &msg)) {
+        if (AddSymbol(state->symbols, name, len, type_copy, 1, state, &msg)) {
             print_code_error(stderr, ast->super.loc, "%s", msg);
             free(msg);
             status = 1;

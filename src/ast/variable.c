@@ -41,6 +41,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             ast->name);
         return 1;
     }
+    if (NULL != state->usedSymbols) {
+        Map_put(state->usedSymbols, ast->name, strlen(ast->name), NULL, NULL);
+    }
     *typeptr = ast->super.type = copy_type(type);
     return 0;
 }
@@ -67,7 +70,15 @@ new_ASTVariable(YYLTYPE loc, char *name) {
 
     variable = safe_malloc(sizeof(*variable));
     *variable = (ASTVariable){
-        { json, getType, codeGen, delete, loc, NULL }, name
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        name
     };
     return (AST *)variable;
 }

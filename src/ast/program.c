@@ -108,6 +108,8 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
     TypeCheckState state = {
         symbols,
         NULL,
+        NULL,
+        NULL,
         classes,
         functions,
         {
@@ -157,6 +159,7 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
                     fieldName,
                     strlen(fieldName),
                     fieldType,
+                    0,
                     &state,
                     NULL);
             }
@@ -216,11 +219,6 @@ addBuiltins(Map *symbols, Vector *classes, Vector *functions, Map *compare) {
         }
     }
     return state;
-}
-
-static void
-json_empty(UNUSED const void *value, FILE *out, UNUSED int indent) {
-    json_string("", out, indent);
 }
 
 static void
@@ -684,6 +682,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     }
     state->indent--;
     fprintf(out, "}\n");
+    delete_Map(state->funcIDs, free);
     return NULL;
 }
 
@@ -706,7 +705,7 @@ delete(void *this) {
 AST *
 new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     ASTProgram *program = NULL;
-    Map *symbols, *compare, *funcIDs;
+    Map *symbols, *compare;
     Vector *classes, *functions;
 
     program = safe_malloc(sizeof(*program));
@@ -714,7 +713,6 @@ new_ASTProgram(YYLTYPE loc, Vector *stmts) {
     classes = Vector();
     functions = Vector();
     compare = Map();
-    funcIDs = Map();
     *program = (ASTProgram){
         {
             json,
@@ -728,8 +726,7 @@ new_ASTProgram(YYLTYPE loc, Vector *stmts) {
         symbols,
         classes,
         functions,
-        compare,
-        funcIDs
+        compare
     };
     return (AST *)program;
 }

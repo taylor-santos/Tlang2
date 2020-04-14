@@ -49,6 +49,9 @@ Map_get(Map *map, const void *key, size_t key_len, void *value);
  */
 #define Map_contains(map, key, len) !Map_get(map, key, len, NULL)
 
+int
+Map_remove(Map *map, const void *key, size_t key_len, void *prev);
+
 void
 delete_Map(Map *map, MAP_DELETE_FUNC delete_value);
 

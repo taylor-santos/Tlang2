@@ -50,6 +50,7 @@ struct FuncType {
     AST *ast;
     struct Vector *generics; // Vector<char*>
     struct Vector *args;     // Vector<Type*>
+    struct Map *env;         // Map<Type*, NULL>
     Type *ret_type;
     struct FuncType *next;   // NULLable
 };
@@ -111,6 +112,8 @@ typedef struct TypeCheckState {
     // NULL and allocation and destruction must be handled by the control
     // flow AST node.
     struct Map *newInitSymbols; // Map<char*, NULL>
+    struct Map *newSymbols;     // Map<char*, NULL>
+    struct Map *usedSymbols;    // Map<char*, NULL>
     struct Vector *classes;     // Vector<const struct ClassType*>
     struct Vector *functions;   // Vector<const struct FuncType*>
     const struct ClassType *builtins[NUM_BUILTINS];
@@ -170,6 +173,7 @@ AddSymbol(struct Map *symbols,
     const char *symbol,
     size_t len,
     Type *type,
+    unsigned char makeCopy,
     const TypeCheckState *state,
     char **msg);
 

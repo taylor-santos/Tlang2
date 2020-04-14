@@ -38,6 +38,9 @@ void
 json_comma(FILE *out, int indent);
 
 void
+json_empty(const void *value, FILE *out, int indent);
+
+void
 json_vector(const struct Vector *list,
     void (*map)(const void *, FILE *, int),
     FILE *out,
