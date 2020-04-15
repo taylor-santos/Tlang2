@@ -9,7 +9,8 @@ typedef struct ASTDefinition ASTDefinition;
 
 struct ASTDefinition {
     AST super;
-    Vector *vars;  // Vector<char* | NULL>: NULL indicates ignored variables
+    Vector *vars;     // Vector<char* | NULL>: NULL indicates ignored variables
+    Vector *varTypes; // Vector<Type* | NULL>
     AST *expr;
 };
 
@@ -95,14 +96,14 @@ handle_spread(const struct SpreadType *spread,
 static int
 getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTDefinition *ast = this;
-    Type *expr_type = NULL;
+    Type *exprType = NULL;
     int status = 0;
     size_t nvars;
 
-    if (ast->expr->getType(ast->expr, state, &expr_type)) {
+    if (ast->expr->getType(ast->expr, state, &exprType)) {
         return 1;
     }
-    if (expr_type == NULL) {
+    if (exprType == NULL) {
         print_code_error(stderr,
             ast->super.loc,
             "%s",
@@ -110,13 +111,14 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 1;
     }
     nvars = Vector_size(ast->vars);
-    if (TYPE_SPREAD == expr_type->type) {
-        return handle_spread((const struct SpreadType *)expr_type,
+    if (TYPE_SPREAD == exprType->type) {
+        return handle_spread((const struct SpreadType *)exprType,
             nvars,
             ast,
             state);
     }
     // Right-hand expression is not a spread tuple
+    ast->varTypes = Vector();
     for (size_t i = 0; i < nvars; i++) {
         char *name = Vector_get(ast->vars, i);
         if (name != NULL) {
@@ -125,22 +127,29 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
             if (NULL != state->usedSymbols) {
                 Map_put(state->usedSymbols, name, len, NULL, NULL);
             }
-            expr_type->init = 1;
+            exprType->init = 1;
             char *msg;
             if (AddSymbol(state->symbols,
                 name,
                 len,
-                expr_type,
+                exprType,
                 1,
                 state,
                 &msg)) {
                 print_code_error(stderr, ast->super.loc, "%s", msg);
                 free(msg);
                 status = 1;
+            } else {
+                Type *prevType;
+                if (Map_get(state->symbols, name, len, &prevType)) {
+                    Vector_append(ast->varTypes, exprType);
+                } else {
+                    Vector_append(ast->varTypes, prevType);
+                }
             }
         }
     }
-    *typeptr = expr_type;
+    *typeptr = exprType;
     return status;
 }
 
@@ -153,6 +162,10 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
     for (size_t i = 0; i < n; i++) {
         char *var = Vector_get(ast->vars, i);
         if (NULL != var) {
+            Type *varType = Vector_get(ast->varTypes, i);
+            if (varType->isRef) {
+                fprintf(out, "*");
+            }
             fprintf(out, "var_%s = ", var);
         }
     }
@@ -165,6 +178,9 @@ static void
 delete(void *this) {
     ASTDefinition *ast = this;
     delete_Vector(ast->vars, free);
+    if (NULL != ast->varTypes) {
+        delete_Vector(ast->varTypes, NULL);
+    }
     delete_AST(ast->expr);
     free(this);
 }
@@ -184,6 +200,7 @@ new_ASTDefinition(YYLTYPE loc, Vector *vars, AST *expr) {
             NULL
         },
         vars,
+        NULL,
         expr
     };
     return (AST *)definition;

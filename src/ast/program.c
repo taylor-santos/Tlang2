@@ -72,8 +72,8 @@ struct Builtin {
     {
         BUILTIN_INT,
         "int",
-        "long long int",
-        "%lld",
+        "int64_t",
+        "%\" PRId64 \"",
         PLUS | MINUS | TIMES | DIVIDE,
         BUILTIN_INT | BUILTIN_BOOL | BUILTIN_DOUBLE | BUILTIN_STRING
     },
@@ -287,6 +287,7 @@ codeGen(void *this, FILE *out, UNUSED CodeGenState *state) {
     fprintf(out, "#include <stdio.h>\n");
     fprintf(out, "#include <stdlib.h>\n");
     fprintf(out, "#include <string.h>\n");
+    fprintf(out, "#include <inttypes.h>\n");
     fprintf(out, "\n");
     fprintf(out, "#define ERROR(msg) { \\\n");
     state->indent++;

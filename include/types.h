@@ -20,7 +20,7 @@ typedef enum Types {
 } Types;
 
 typedef enum Qualifiers {
-    Q_CONST = 0x1, Q_FRIEND = 0x2
+    Q_CONST = 1 << 0, Q_FRIEND = 1 << 1, Q_MAYBE = 1 << 2
 } Qualifiers;
 
 Qualifiers *
@@ -39,9 +39,10 @@ struct Type {
     char *(*codeGen)(const void *this, const char *name);
     void (*delete)(void *this);
     Types type;
-    struct Vector *qualifiers; // Vector<Qualifiers*>
+    Qualifiers qualifiers; // Vector<Qualifiers*>
     unsigned char init : 1;
     unsigned char isCopy : 1;
+    unsigned char isRef : 1;
     YYLTYPE loc;
 };
 
@@ -97,6 +98,11 @@ struct MaybeType {
     Type *type;
 };
 
+struct RefType {
+    Type super;
+    Type *type;
+};
+
 enum BUILTIN_TYPE {
     BUILTIN_INT = 1 << 0,
     BUILTIN_BOOL = 1 << 1,
@@ -137,7 +143,7 @@ void
 json_type(const Type *type, FILE *out, int indent);
 
 void
-json_qualifier(const Qualifiers *value, FILE *out, int indent);
+json_qualifier(Qualifiers value, FILE *out, int indent);
 
 void
 delete_type(Type *type);
@@ -218,10 +224,5 @@ new_NoneType(YYLTYPE loc);
     new_ArrayType(loc, type)
 Type *
 new_ArrayType(YYLTYPE loc, Type *type);
-
-#define MaybeType(loc, type) \
-    new_MaybeType(loc, type)
-Type *
-new_MaybeType(YYLTYPE loc, Type *type);
 
 #endif

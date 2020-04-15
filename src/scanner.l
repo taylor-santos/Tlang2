@@ -205,6 +205,7 @@ switch   { return T_SWITCH; }
 case     { return T_CASE; }
 default  { return T_DEFAULT; }
 operator { return T_OPERATOR; }
+ref      { return T_REF; }
 [=][>]   { return T_ARROW; }
 [*][=]   { return T_MUL_ASSIGN; }
 [/][=]   { return T_DIV_ASSIGN; }

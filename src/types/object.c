@@ -10,13 +10,10 @@ json(const void *type, FILE *out, int indent) {
     json_start(out, &indent);
     json_label("type", out);
     json_string("object", out, indent);
-    if (NULL != this->super.qualifiers) {
+    if (0 != this->super.qualifiers) {
         json_comma(out, indent);
         json_label("qualifiers", out);
-        json_vector(this->super.qualifiers,
-            (JSON_VALUE_FUNC)json_qualifier,
-            out,
-            indent);
+        json_qualifier(this->super.qualifiers, out, indent);
     }
     json_comma(out, indent);
     json_label("name", out);
@@ -83,26 +80,32 @@ toString(const void *type) {
 static char *
 codeGen(const void *this, const char *name) {
     const struct ObjectType *type = this;
-    if (NULL != type->class->name) {
-        return safe_asprintf("class_%s%s%s",
-            type->class->name,
-            NULL == name
-                ? ""
-                : " ",
-            NULL == name
-                ? ""
-                : name);
+    if (type->super.isRef) {
+        if (NULL != type->class->name) {
+            if (NULL != name) {
+                return safe_asprintf("class_%s *%s", type->class->name, name);
+            } else {
+                return safe_asprintf("class_%s *", type->class->name);
+            }
+        } else {
+            return safe_strdup("/* CLASS NAME ID NOT IMPLEMENTED */");
+        }
     } else {
-        return safe_strdup("/* CLASS NAME ID NOT IMPLEMENTED */");
+        if (NULL != type->class->name) {
+            if (NULL != name) {
+                return safe_asprintf("class_%s %s", type->class->name, name);
+            } else {
+                return safe_asprintf("class_%s", type->class->name);
+            }
+        } else {
+            return safe_strdup("/* CLASS NAME ID NOT IMPLEMENTED */");
+        }
     }
 }
 
 static void
 delete(void *type) {
     struct ObjectType *this = type;
-    if (NULL != this->super.qualifiers) {
-        delete_Vector(this->super.qualifiers, free);
-    }
     if (!this->super.isCopy) {
         free(this->name);
         delete_Vector(this->generics, free);
@@ -114,11 +117,6 @@ static Type *
 copy(const void *type) {
     const struct ObjectType *this = type;
     struct ObjectType *type_copy = safe_malloc(sizeof(*type_copy));
-    Vector *qualifiers = NULL;
-    if (NULL != this->super.qualifiers) {
-        qualifiers = copy_Vector(this->super.qualifiers,
-            (VEC_COPY_FUNC)copy_Qualifiers);
-    }
     *type_copy = (struct ObjectType){
         {
             json,
@@ -129,9 +127,10 @@ copy(const void *type) {
             codeGen,
             delete,
             TYPE_OBJECT,
-            qualifiers,
+            this->super.qualifiers,
             this->super.init,
             1,
+            this->super.isRef,
             this->super.loc
         },
         this->name,
@@ -156,7 +155,8 @@ new_ObjectType(YYLTYPE loc, char *name, struct Vector *generics) {
             codeGen,
             delete,
             TYPE_OBJECT,
-            NULL,
+            0,
+            0,
             0,
             0,
             loc

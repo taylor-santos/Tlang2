@@ -261,10 +261,11 @@ x = 6.4 => int;
 y = foo(x, 3.2);
 */
 a = 10;
-foo = func(x: int) => none {
-    bar = func() => none {
-        a = x;
+foo = func(x: ref int) => none {
+    bar = func(y: ref int) => none {
+        y = a;
     };
-    bar();
+    bar(ref x);
 };
-foo(5);
+x = 5;
+foo(ref x);

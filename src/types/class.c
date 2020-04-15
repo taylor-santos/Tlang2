@@ -16,13 +16,10 @@ json(const void *type, FILE *out, int indent) {
     json_start(out, &indent);
     json_label("type", out);
     json_string("class", out, indent);
-    if (NULL != this->super.qualifiers) {
+    if (0 != this->super.qualifiers) {
         json_comma(out, indent);
         json_label("qualifiers", out);
-        json_vector(this->super.qualifiers,
-            (JSON_VALUE_FUNC)json_qualifier,
-            out,
-            indent);
+        json_qualifier(this->super.qualifiers, out, indent);
     }
     json_comma(out, indent);
     json_label("generics", out);
@@ -148,9 +145,6 @@ delete(UNUSED void *type) {
 
 void
 delete_ClassType(struct ClassType *this) {
-    if (NULL != this->super.qualifiers) {
-        delete_Vector(this->super.qualifiers, free);
-    }
     if (!this->super.isCopy) {
         delete_Vector(this->generics, free);
         delete_Vector(this->supers, free);
@@ -190,7 +184,8 @@ new_ClassType(YYLTYPE loc,
             codeGen,
             delete,
             TYPE_CLASS,
-            NULL,
+            0,
+            0,
             0,
             0,
             loc

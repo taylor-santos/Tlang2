@@ -82,7 +82,7 @@
     long long int int_lit;
     double double_lit;
     Type *type;
-    Qualifiers *qualifier;
+    Qualifiers qualifier;
 }
 
 %token             T_CLASS      "class"
@@ -106,6 +106,7 @@
                    T_CASE       "case"
                    T_DEFAULT    "default"
                    T_OPERATOR   "operator"
+                   T_REF        "ref"
                    T_ARROW      "=>"
                    T_MUL_ASSIGN "*="
                    T_DIV_ASSIGN "/="
@@ -133,14 +134,14 @@
             Init PrimaryExpr PostfixExpr UnaryExpr OpExpr TypeStmt Impl If While
             Switch Do CastExpr
 %type<vec>  OptStatements Statements IdentList OptInherits Inherits OptNamedArgs
-            NamedArgs OptArgsOptNamed ArgsOptNamed Qualifiers DefVars
+            NamedArgs OptArgsOptNamed ArgsOptNamed DefVars
             Constructor OptArguments Arguments OptElse OptCases Cases OptDefault
 %type<svec> Types Tuple
 %type<type> Type TypeDef FuncDef ClassDef TypeOptNamed
 %type<class> Fields OptFields
 %type<switchCase> Case
-%type<field> Field Operator
-%type<qualifier> Qualifier
+%type<field> Field NamedArg Operator
+%type<qualifier> Qualifier Qualifiers
 %type<str> Binop Postop
 
 %left T_AND T_OR
@@ -681,9 +682,6 @@ TypeDef
   |  '[' ']' Type {
         $$ = ArrayType(@$, $3);
     }
-  | T_MAYBE Type {
-        $$ = MaybeType(@$, $2);
-    }
 
 Types
   : Type T_RANGE {
@@ -703,21 +701,20 @@ Types
     }
 
 Qualifiers
-  : Qualifier {
-        $$ = init_Vector($1);
-    }
+  : Qualifier
   | Qualifiers Qualifier {
-        $$ = Vector_append($1, $2);
+        $$ = $1 | $2;
     }
 
 Qualifier
   : T_CONST {
-        $$ = safe_malloc(sizeof(*$$));
-        *$$ = Q_CONST;
+        $$ = Q_CONST;
     }
   | T_FRIEND {
-        $$ = safe_malloc(sizeof(*$$));
-        *$$ = Q_FRIEND;
+        $$ = Q_FRIEND;
+    }
+  | T_MAYBE {
+        $$ = Q_MAYBE;
     }
 
 FuncDef
@@ -747,7 +744,15 @@ TypeOptNamed
         $$ = $3;
         free($1);
     }
+  | T_IDENT ':' T_REF Type {
+        $$ = $4;
+        $$->isRef = 1;
+    }
   | Type
+  | T_REF Type {
+        $$ = $2;
+        $$->isRef = 1;
+    }
 
 Func
   : '<' IdentList '>' T_FUNC '(' OptNamedArgs ')' T_ARROW Type '{' OptStatements '}' {
@@ -757,7 +762,6 @@ Func
         $$ = ASTFunc(@$, Vector(), $3, $6, $8);
     }
 
-
 OptNamedArgs
   : %empty {
         $$ = Vector();
@@ -765,11 +769,24 @@ OptNamedArgs
   | NamedArgs
 
 NamedArgs
-  : Field {
+  : NamedArg {
         $$ = init_Vector($1);
     }
-  | NamedArgs ',' Field {
+  | NamedArgs ',' NamedArg {
         $$ = Vector_append($1, $3);
+    }
+
+NamedArg
+  : IdentList ':' Type {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = $1;
+        $$->type = $3;
+    }
+  | IdentList ':' T_REF Type {
+        $$ = safe_malloc(sizeof(*$$));
+        $$->names = $1;
+        $$->type = $4;
+        $$->type->isRef = 1;
     }
 
 Init
@@ -791,10 +808,16 @@ OptArguments
 
 Arguments
   : Expression {
-        $$ = init_Vector($1);
+        $$ = init_Vector(Argument($1, 0));
+    }
+  | T_REF Expression {
+        $$ = init_Vector(Argument($2, 1));
     }
   | Arguments ',' Expression {
-        $$ = Vector_append($1, $3);
+        $$ = Vector_append($1, Argument($3, 0));
+    }
+  | Arguments ',' T_REF Expression {
+        $$ = Vector_append($1, Argument($4, 1));
     }
 
 IdentList

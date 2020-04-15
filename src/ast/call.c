@@ -10,7 +10,7 @@ typedef struct ASTCall ASTCall;
 struct ASTCall {
     AST super;
     AST *expr;
-    Vector *args;     // Vector<AST*>
+    Vector *args;     // Vector<struct Argument*>
     // NULL until type checker is executed:
     Vector *argTypes; // Vector<Type*>, types don't need to be deleted
 };
@@ -26,12 +26,12 @@ json(const void *this, FILE *out, int indent) {
     json_AST(ast->expr, out, indent);
     json_comma(out, indent);
     json_label("args", out);
-    json_vector(ast->args, (JSON_VALUE_FUNC)json_AST, out, indent);
+    json_vector(ast->args, (JSON_VALUE_FUNC)json_Argument, out, indent);
     json_end(out, &indent);
 }
 
 static int
-getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
+getType(void *this, TypeCheckState *state, Type **typeptr) {
     ASTCall *ast = this;
     Type *funcType = NULL;
     int status = 0;
@@ -50,9 +50,9 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
     size_t ngiven = Vector_size(ast->args);
     ast->argTypes = new_Vector(ngiven);
     for (size_t j = 0; j < ngiven; j++) {
-        AST *arg = Vector_get(ast->args, j);
+        struct Argument *arg = Vector_get(ast->args, j);
         Type *givenType = NULL;
-        if (arg->getType(arg, state, &givenType)) {
+        if (arg->ast->getType(arg->ast, state, &givenType)) {
             status = 1;
             continue;
         }
@@ -72,8 +72,13 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
         }
         int valid = 1;
         for (size_t j = 0; j < nargs; j++) {
+            struct Argument *arg = Vector_get(ast->args, j);
             Type *givenType = Vector_get(ast->argTypes, j),
                 *expectType = Vector_get(func->args, j);
+            if (expectType->isRef != arg->isRef) {
+                valid = 0;
+                break;
+            }
             if (givenType->compare(givenType, expectType, state)) {
                 valid = 0;
                 break;
@@ -117,32 +122,31 @@ getType(void *this, TypeCheckState *state, UNUSED Type **typeptr) {
 static char *
 codeGen(void *this, FILE *out, CodeGenState *state) {
     const ASTCall *ast = this;
+    const struct FuncType *func = (struct FuncType *)ast->expr->type;
     char *code = ast->expr->codeGen(ast->expr, out, state);
     size_t n = Vector_size(ast->args);
     char *args[n];
     for (size_t i = 0; i < n; i++) {
-        AST *arg = Vector_get(ast->args, i);
-        char *argCode = arg->codeGen(arg, out, state);
-        args[i] = safe_asprintf("temp%d", state->tempCount);
-        char *argName = arg->type->codeGen(arg->type, args[i]);
-        state->tempCount++;
-        fprintf(out, "%*s", state->indent * 4, "");
-        fprintf(out, "%s = %s;\n", argName, argCode);
-        free(argName);
-        free(argCode);
+        struct Argument *arg = Vector_get(ast->args, i);
+        char *argCode = arg->ast->codeGen(arg->ast, out, state);
+        args[i] = argCode;
     }
     char *argsName = safe_asprintf("temp%d", state->tempCount);
     state->tempCount++;
     fprintf(out, "%*s", state->indent * 4, "");
     fprintf(out, "void* %s[] = {", argsName);
-    char *sep = "";
+    char *sep = " ";
     for (size_t i = 0; i < n; i++) {
-        fprintf(out, "%s%s", sep, args[i]);
+        struct Argument *arg = Vector_get(ast->args, i);
+        fprintf(out, "%s", sep);
+        if (arg->isRef) {
+            fprintf(out, "&");
+        }
+        fprintf(out, "%s", args[i]);
         sep = ", ";
         free(args[i]);
     }
-    fprintf(out, "};\n");
-    struct FuncType *func = (struct FuncType *)ast->expr->type;
+    fprintf(out, " };\n");
     char *tmpName = NULL;
     if (TYPE_NONE != func->ret_type->type) {
         tmpName = safe_asprintf("temp%d", state->tempCount);
@@ -164,7 +168,7 @@ static void
 delete(void *this) {
     ASTCall *ast = this;
     delete_AST(ast->expr);
-    delete_Vector(ast->args, (VEC_DELETE_FUNC)delete_AST);
+    delete_Vector(ast->args, (VEC_DELETE_FUNC)delete_Argument);
     if (NULL != ast->super.type) {
         delete_type(ast->super.type);
         delete_Vector(ast->argTypes, NULL);

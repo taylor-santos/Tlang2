@@ -7,19 +7,7 @@
 #include "ast.h"
 #include "map.h"
 #include "parser.h"
-
-Qualifiers *
-copy_Qualifiers(const Qualifiers *q) {
-    Qualifiers *new_q;
-
-    if (NULL == (new_q = malloc(sizeof(*new_q)))) {
-        print_ICE("");
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    *new_q = *q;
-    return new_q;
-}
+#include "dynamic_string.h"
 
 void
 json_type(const Type *type, FILE *out, int indent) {
@@ -39,15 +27,19 @@ TypeCompare(const Type *type1,
 }
 
 void
-json_qualifier(const Qualifiers *value, FILE *out, int indent) {
-    switch (*value) {
-        case Q_CONST:
-            json_string("const", out, indent);
-            break;
-        case Q_FRIEND:
-            json_string("friend", out, indent);
-            break;
+json_qualifier(Qualifiers value, FILE *out, int indent) {
+    dstring str = dstring("");
+    char *sep = "";
+    if (Q_CONST & value) {
+        vappend_str(&str, "%sconst", sep);
+        sep = ",\n";
     }
+    if (Q_FRIEND & value) {
+        vappend_str(&str, "%sfriend", sep);
+        sep = ",\n";
+    }
+    json_string(str.str, out, indent);
+    delete_dstring(str);
 }
 
 void

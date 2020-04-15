@@ -51,8 +51,8 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
         return 0;
     } else if (TYPE_ARRAY == type->type) {
         const struct ArrayType *array = (const struct ArrayType *)type;
-        *typeptr = ast->super.type =
-            MaybeType(ast->super.loc, copy_type(array->type));
+        array->type->qualifiers |= Q_MAYBE;
+        *typeptr = ast->super.type = array->type;
         return 0;
     }
     char *typeName = type->toString(type);
@@ -73,9 +73,6 @@ static void
 delete(void *this) {
     ASTConstIndex *ast = this;
     delete_AST(ast->expr);
-    if (NULL != ast->super.type) {
-        delete_type(ast->super.type);
-    }
     free(this);
 }
 
@@ -85,7 +82,16 @@ new_ASTConstIndex(YYLTYPE loc, AST *expr, long long int index) {
 
     node = safe_malloc(sizeof(*node));
     *node = (ASTConstIndex){
-        { json, getType, codeGen, delete, loc, NULL }, expr, index
+        {
+            json,
+            getType,
+            codeGen,
+            delete,
+            loc,
+            NULL
+        },
+        expr,
+        index
     };
     return (AST *)node;
 }

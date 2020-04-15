@@ -8,7 +8,7 @@ typedef struct ASTInt ASTInt;
 
 struct ASTInt {
     AST super;
-    long long int val;
+    int64_t val;
 };
 
 static void
@@ -39,7 +39,9 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 static char *
 codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
     ASTInt *ast = this;
-    return safe_asprintf("builtin_int(%lld)", ast->val);
+    return safe_asprintf("builtin_int(%"
+        PRId64
+        ")", ast->val);
 }
 
 static void

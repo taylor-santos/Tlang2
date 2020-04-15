@@ -10,13 +10,10 @@ json(const void *type, FILE *out, int indent) {
     json_start(out, &indent);
     json_label("type", out);
     json_string("array", out, indent);
-    if (NULL != this->super.qualifiers) {
+    if (0 != this->super.qualifiers) {
         json_comma(out, indent);
         json_label("qualifiers", out);
-        json_vector(this->super.qualifiers,
-            (JSON_VALUE_FUNC)json_qualifier,
-            out,
-            indent);
+        json_qualifier(this->super.qualifiers, out, indent);
     }
     json_comma(out, indent);
     json_label("type", out);
@@ -57,9 +54,6 @@ codeGen(UNUSED const void *this, UNUSED const char *name) {
 static void
 delete(void *type) {
     struct ArrayType *this = type;
-    if (NULL != this->super.qualifiers) {
-        delete_Vector(this->super.qualifiers, free);
-    }
     if (!this->super.isCopy) {
         delete_type(this->type);
     }
@@ -70,11 +64,6 @@ static Type *
 copy(const void *type) {
     const struct ArrayType *this = type;
     struct ArrayType *type_copy = safe_malloc(sizeof(*type_copy));
-    Vector *qualifiers = NULL;
-    if (NULL != this->super.qualifiers) {
-        qualifiers = copy_Vector(this->super.qualifiers,
-            (VEC_COPY_FUNC)copy_Qualifiers);
-    }
     *type_copy = (struct ArrayType){
         {
             json,
@@ -85,11 +74,13 @@ copy(const void *type) {
             codeGen,
             delete,
             TYPE_ARRAY,
-            qualifiers,
+            this->super.qualifiers,
             this->super.init,
             1,
+            0,
             this->super.loc
-        }, this->type
+        },
+        this->type
     };
     return (Type *)type_copy;
 }
@@ -98,7 +89,7 @@ Type *
 new_ArrayType(YYLTYPE loc, Type *type) {
     struct ArrayType *array;
 
-    array = safe_malloc(sizeof(*type));
+    array = safe_malloc(sizeof(*array));
     *array = (struct ArrayType){
         {
             json,
@@ -109,11 +100,13 @@ new_ArrayType(YYLTYPE loc, Type *type) {
             codeGen,
             delete,
             TYPE_ARRAY,
-            NULL,
+            0,
+            0,
             0,
             0,
             loc
-        }, type
+        },
+        type
     };
     return (Type *)array;
 }

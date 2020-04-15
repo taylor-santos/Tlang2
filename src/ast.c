@@ -11,7 +11,11 @@ new_TypeCase(char *name, struct Type *type, struct Vector *stmts) {
 
     ret = safe_malloc(sizeof(*ret));
     *ret = (struct Case){
-        CASE_TYPE, .type = { name, type }, stmts
+        CASE_TYPE, .type = {
+            name,
+            type
+        },
+        stmts
     };
     return ret;
 }
@@ -22,7 +26,8 @@ new_ExprCase(AST *expr, struct Vector *stmts) {
 
     ret = safe_malloc(sizeof(*ret));
     *ret = (struct Case){
-        CASE_EXPR, .expr = expr, stmts
+        CASE_EXPR, .expr = expr,
+        stmts
     };
     return ret;
 }
@@ -63,6 +68,27 @@ json_case(const struct Case *c, FILE *out, int indent) {
     json_label("statements", out);
     json_vector(c->stmts, (JSON_VALUE_FUNC)json_AST, out, indent);
     json_end(out, &indent);
+}
+
+struct Argument *
+new_Argument(AST *ast, unsigned char isRef) {
+    struct Argument *arg = safe_malloc(sizeof(*arg));
+    *arg = (struct Argument){
+        ast,
+        isRef
+    };
+    return arg;
+}
+
+void
+json_Argument(const struct Argument *arg, FILE *out, int indent) {
+    json_AST(arg->ast, out, indent);
+}
+
+void
+delete_Argument(struct Argument *arg) {
+    delete_AST(arg->ast);
+    free(arg);
 }
 
 void

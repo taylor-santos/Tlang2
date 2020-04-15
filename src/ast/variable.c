@@ -51,7 +51,11 @@ getType(void *this, TypeCheckState *state, Type **typeptr) {
 static char *
 codeGen(void *this, UNUSED FILE *out, UNUSED CodeGenState *state) {
     const ASTVariable *ast = this;
-    return safe_asprintf("var_%s", ast->name);
+    return safe_asprintf("%svar_%s",
+        ast->super.type->isRef
+            ? "*"
+            : "",
+        ast->name);
 }
 
 static void

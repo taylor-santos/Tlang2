@@ -35,6 +35,19 @@ struct Field {
     struct Type *type;
 };
 
+struct Argument {
+    AST *ast;
+    unsigned char isRef : 1;
+};
+struct Argument *
+new_Argument(AST *ast, unsigned char isRef);
+#define Argument(ast, isRef) \
+    new_Argument(ast, isRef)
+void
+json_Argument(const struct Argument *arg, FILE *out, int indent);
+void
+delete_Argument(struct Argument *arg);
+
 struct ClassBody {
     struct Vector *fields; // Vector<Field*>
     struct Vector *ctors;  // Vector<AST*>
@@ -226,5 +239,10 @@ new_ASTSwitch(YYLTYPE loc,
     new_ASTCast(loc, expr, type)
 AST *
 new_ASTCast(YYLTYPE loc, AST *expr, struct Type *type);
+
+#define ASTRef(loc, expr) \
+    new_ASTRef(loc, expr)
+AST *
+new_ASTRef(YYLTYPE loc, AST *expr);
 
 #endif
