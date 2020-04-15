@@ -214,7 +214,14 @@ codeGenFuncBody(void *this, FILE *out, struct CodeGenState *state) {
             char *typeName = arg->type->codeGen(arg->type, ident);
             free(ident);
             fprintf(out, "%*s", state->indent * 4, "");
-            fprintf(out, "%s = args[%d];\n", typeName, argi++);
+            fprintf(out, "%s = ", typeName);
+            if (TYPE_FUNC == arg->type->type) {
+                if (!arg->type->isRef) {
+                    fprintf(out, "*");
+                }
+                fprintf(out, "(closure*)");
+            }
+            fprintf(out, "args[%d];\n", argi++);
             free(typeName);
         }
     }

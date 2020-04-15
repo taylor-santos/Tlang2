@@ -327,25 +327,25 @@ PostfixExpr
 UnaryExpr
   : PostfixExpr
   | T_INC PostfixExpr {
-        Vector *args = init_Vector($2);
+        Vector *args = init_Vector(Argument($2, 0));
         char *name = safe_strdup("++");
         AST *func = ASTVariable(@$, name);
         $$ = ASTCall(@$, func, args);
     }
   | T_DEC PostfixExpr {
-        Vector *args = init_Vector($2);
+        Vector *args = init_Vector(Argument($2, 0));
         char *name = safe_strdup("--");
         AST *func = ASTVariable(@$, name);
         $$ = ASTCall(@$, func, args);
     }
   | '-' PostfixExpr {
-        Vector *args = init_Vector($2);
+        Vector *args = init_Vector(Argument($2, 0));
         char *name = safe_strdup("-");
         AST *func = ASTVariable(@$, name);
         $$ = ASTCall(@$, func, args);
     }
   | '!' PostfixExpr {
-        Vector *args = init_Vector($2);
+        Vector *args = init_Vector(Argument($2, 0));
         char *name = safe_strdup("!");
         AST *func = ASTVariable(@$, name);
         $$ = ASTCall(@$, func, args);
@@ -363,79 +363,79 @@ CastExpr
 OpExpr
   : CastExpr
   | OpExpr '*' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("*");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr '/' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("/");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr '%' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("%");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr '+' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("+");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr '-' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("-");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr '<' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("<");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr '>' OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup(">");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr T_LE OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("<=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr T_GE OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup(">=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr T_EQ OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("==");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr T_NE OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("!=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr T_AND OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("&&");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | OpExpr T_OR OpExpr {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("||");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
@@ -461,31 +461,31 @@ Tuple
 Expression
   : OpExpr
   | PostfixExpr T_MUL_ASSIGN Expression {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("*=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | PostfixExpr T_DIV_ASSIGN Expression {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("/=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | PostfixExpr T_MOD_ASSIGN Expression {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("%=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | PostfixExpr T_ADD_ASSIGN Expression {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("+=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);
     }
   | PostfixExpr T_SUB_ASSIGN Expression {
-        Vector *args = init_Vector($3);
+        Vector *args = init_Vector(Argument($3, 0));
         char *name = safe_strdup("-=");
         AST *method = ASTMember(@$, $1, name);
         $$ = ASTCall(@$, method, args);

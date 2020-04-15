@@ -139,7 +139,7 @@ codeGen(void *this, FILE *out, CodeGenState *state) {
     for (size_t i = 0; i < n; i++) {
         struct Argument *arg = Vector_get(ast->args, i);
         fprintf(out, "%s", sep);
-        if (arg->isRef) {
+        if (arg->isRef || TYPE_FUNC == arg->ast->type->type) {
             fprintf(out, "&");
         }
         fprintf(out, "%s", args[i]);

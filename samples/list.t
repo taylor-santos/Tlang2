@@ -260,12 +260,41 @@ foo = func(x: int, y: double) => int {
 x = 6.4 => int;
 y = foo(x, 3.2);
 */
-a = 10;
-foo = func(x: ref int) => none {
-    bar = func(y: ref int) => none {
-        y = a;
-    };
-    bar(ref x);
+/*
+foo = func(x: ref int, y: int, fn: func(ref int, int) => none) => none {
+    fn(ref x, y);
 };
-x = 5;
-foo(ref x);
+
+bar = func(x: ref int, y: int) => none {
+    x = y-x;
+};
+
+a = 10;
+foo(ref a, 5, bar);
+*/
+/*
+y = 0;
+foo = func(x: ref int) => none {
+    x = y;
+};
+
+bar = func() => int {
+    a = 10;
+    foo(ref a);
+    return a;
+};
+y = 10;
+x = bar();
+*/
+a = 0;
+foo = func() => none {};
+bar = func() => none {
+    a += 1;
+};
+
+baz = func(fn: ref func() => none) => none {
+    fn = bar;
+};
+
+baz(ref foo);
+foo();

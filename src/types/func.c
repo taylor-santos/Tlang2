@@ -155,10 +155,17 @@ toString(const void *type) {
 }
 
 static char *
-codeGen(UNUSED const void *this, const char *name) {
+codeGen(const void *this, const char *name) {
+    const struct FuncType *func = this;
     if (NULL == name) {
+        if (func->super.isRef) {
+            return safe_strdup("closure *");
+        }
         return safe_strdup("closure");
     } else {
+        if (func->super.isRef) {
+            return safe_asprintf("closure *%s", name);
+        }
         return safe_asprintf("closure %s", name);
     }
 }
